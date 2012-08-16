@@ -2858,7 +2858,16 @@ public final class Settings {
          * one press kills all cached app processes freeing ram
          * @hide
          */
-		public static final String RECENT_KILL_ALL_BUTTON = "recent_kill_all_button";
+	public static final String RECENT_KILL_ALL_BUTTON = "recent_kill_all_button";
+
+
+        /**
+         * Holds the text for the Carrier Label. An empty string will bring
+         * the default text back.
+         * @hide
+         */
+        public static final String CUSTOM_CARRIER_LABEL = "custom_carrier_label";
+
     }
 
     /**
