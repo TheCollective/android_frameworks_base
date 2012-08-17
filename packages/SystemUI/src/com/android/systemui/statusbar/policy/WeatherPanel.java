@@ -1,3 +1,4 @@
+
 package com.android.systemui.statusbar.policy;
 
 import android.content.BroadcastReceiver;
@@ -122,7 +123,6 @@ public class WeatherPanel extends FrameLayout {
         @Override
         public void onClick(View v) {
             Intent weatherintent = new Intent("com.collective.personalize.INTENT_WEATHER_REQUEST");
-
             if (v.getId() == R.id.condition_image) {
                 weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_TYPE", "startapp");
                 weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_ISMANUAL", true);
@@ -130,9 +130,7 @@ public class WeatherPanel extends FrameLayout {
                 weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_TYPE", "updateweather");
                 weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_ISMANUAL", true);
             }
-
             v.getContext().sendBroadcast(weatherintent);
-
         }
     };
 
@@ -161,9 +159,9 @@ public class WeatherPanel extends FrameLayout {
 
         if (!mAttached) {
             mAttached = true;
+
             IntentFilter filter = new IntentFilter("com.collective.personalize.INTENT_WEATHER_UPDATE");
             getContext().registerReceiver(weatherReceiver, filter, null, getHandler());
-
             updateSettings();
             mContentResolver = getContext().getContentResolver();
             mContentObserver = new ContentObserver(getHandler()) {

@@ -150,5 +150,10 @@
 
     <!-- Height of the carrier/wifi name label -->
     <dimen name="carrier_label_height">24dp</dimen>
+
+    <!-- Size of top margin on Clock font to edge on unlock LockScreen -->
+    <dimen name="keyguard_lockscreen_status_line_clockfont_top_margin">20dip</dimen>
+
+    <!-- Height of carrier label + close handle -->
     <dimen name="weather_text_margin">56dp</dimen>
 </resources>

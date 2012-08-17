@@ -3725,7 +3725,7 @@
   <public type="style" name="Widget.DeviceDefault.Light.MediaRouteButton" id="0x010301d8" />
 
 <!-- ===============================================================
-     Resources added in version JB of AOKP
+     Resources added in version JB of AOCP
      =============================================================== -->
   <eat-comment />
 
@@ -3754,12 +3754,28 @@
   <java-symbol type="string" name="com.amazon.mp3.playstatechanged_album" />
   <java-symbol type="string" name="com.amazon.mp3.playstatechanged_id" />
 
-<!-- Always show battery status on lockscreen -->
+ <!-- AOCP lockscreen -->
+  <java-symbol type="id" name="screen_info" />
+
+ <!-- Calendar -->
+  <java-symbol type="id" name="calendar" />
+  <java-symbol type="id" name="event_title" />
+  <java-symbol type="id" name="event_details" />
+  <java-symbol type="layout" name="calendar_entry" />
+  <java-symbol type="string" name="lockscreen_calendar_tomorrow" />
+
+ <!-- Always show battery status on lockscreen -->
   <java-symbol type="string" name="lockscreen_always_battery" />
   <java-symbol type="string" name="lockscreen_always_low_battery" />
+
 
 <!-- Power menu -->
   <java-symbol type="string" name="global_action_screenshot" />
   <java-symbol type="drawable" name="ic_lock_screenshot" />
+
+ <!-- Weather -->
+  <public type="string" name="weatherpanel_slash" />
+  <public type="drawable" name="weather_condition" />
+
 
 </resources>
