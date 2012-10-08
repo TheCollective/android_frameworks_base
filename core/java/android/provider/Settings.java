@@ -3041,15 +3041,19 @@ public final class Settings {
          * Custom string for package;color|pacakge;color
          * so we can change custom colors per app
          * @hide
-
 	 */
         public static final String LED_CUSTOM_VALUES = "led_custom_values";
+
+        /**
+	 * What brightness to use for the notificaion LED
+	 * @hide
+	 */
+        public static final String LED_BRIGHTNESS = "led_brightness";
 	         
         /**
 	 *
 	 * @hide
 	 */
-
         public static final String NAVIGATION_BAR_BUTTON_ALPHA = "navigation_bar_button_alpha";
         
         /**
