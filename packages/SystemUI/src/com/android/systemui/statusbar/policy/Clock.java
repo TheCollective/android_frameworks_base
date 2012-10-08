@@ -256,7 +256,7 @@ public class Clock extends TextView {
 			todayIs = getResources().getString(R.string.day_of_week_medium_saturday);
 			break;
     	}
-    		
+ 		
         return todayIs.toUpperCase() + " ";
     }
     
