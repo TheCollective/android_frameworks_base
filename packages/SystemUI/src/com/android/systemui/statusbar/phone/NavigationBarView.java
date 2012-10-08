@@ -268,9 +268,12 @@ public class NavigationBarView extends LinearLayout {
                         mLongpressActions[j],
                         mPortraitIcons[j]);
                 v.setTag((landscape ? "key_land_" : "key_") + j);
-
                 addButton(navButtonLayout, v, landscape);
                 addLightsOutButton(lightsOut, v, landscape, false);
+                
+                if (v.getId() == R.id.back){
+                	mBackIcon = mBackLandIcon = v.getDrawable();
+                }
 
                 if (mNumberOfButtons == 3 && j != (mNumberOfButtons - 1)) {
                     // add separator view here
@@ -279,7 +282,6 @@ public class NavigationBarView extends LinearLayout {
                     addButton(navButtonLayout, separator, landscape);
                     addLightsOutButton(lightsOut, separator, landscape, true);
                 }
-
             }
             if (currentSetting != SHOW_DONT) {
                 View rightMenuKey = generateKey(landscape, KEY_MENU_RIGHT);
@@ -477,11 +479,10 @@ public class NavigationBarView extends LinearLayout {
         if (getBackButton() != null) {
         	getBackButton().setAlpha(
         			(0 != (hints & StatusBarManager.NAVIGATION_HINT_BACK_NOP)) ? 0.5f : 1.0f);
-        	// Disable this for the moment
-        	/*((ImageView)getBackButton()).setImageDrawable(
-                (0 != (hints & StatusBarManager.NAVIGATION_HINT_BACK_ALT))
+            ((ImageView)getBackButton()).setImageDrawable(
+                    (0 != (hints & StatusBarManager.NAVIGATION_HINT_BACK_ALT))
                     ? (mVertical ? mBackAltLandIcon : mBackAltIcon)
-                    : (mVertical ? mBackLandIcon : mBackIcon)); */
+                    : (mVertical ? mBackLandIcon : mBackIcon));
         }
         if (getHomeButton()!=null) {
         	getHomeButton().setAlpha(
