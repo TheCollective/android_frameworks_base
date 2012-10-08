@@ -164,8 +164,6 @@ ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
 	    com_android_internal_app_ActivityTrigger.cpp
     LOCAL_C_INCLUDES += \
 	    hardware/qcom/display/libtilerenderer
-    LOCAL_SHARED_LIBRARIES += \
-	    libtilerenderer
 endif
 
 LOCAL_C_INCLUDES += \
