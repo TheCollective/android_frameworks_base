@@ -4097,8 +4097,8 @@ public final class Settings {
          *                       1 = Subscription from NV
          * @hide
          */
-        public static final String PREFERRED_CDMA_SUBSCRIPTION =
-                "preferred_cdma_subscription";
+        //public static final String PREFERRED_CDMA_SUBSCRIPTION =
+        //       "preferred_cdma_subscription";
 
         /**
          * Whether the enhanced voice privacy mode is enabled.
