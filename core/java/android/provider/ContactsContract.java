@@ -7402,7 +7402,7 @@ public final class ContactsContract {
         /**
          * The content:// style URI for this table
          */
-        public static final Uri CONTENT_URI =core/java/android/provider/ContactsContract.java
+        public static final Uri CONTENT_URI =
                 Uri.withAppendedPath(AUTHORITY_URI, "settings");
 
         /**
@@ -7818,7 +7818,7 @@ public final class ContactsContract {
          * This is the intent that is fired when a search suggestion is clicked on.
          */
         public static final String SEARCH_SUGGESTION_CLICKED =
-                "android.provider.Contacts.SEARCH_SUGGESTION_CLICKED";core/java/android/provider/ContactsContract.java
+                "android.provider.Contacts.SEARCH_SUGGESTION_CLICKED";
 
         /**
          * This is the intent that is fired when a search suggestion for dialing a number
