@@ -188,6 +188,7 @@ public class UsbDeviceManager {
         StorageManager storageManager = (StorageManager)
                 mContext.getSystemService(Context.STORAGE_SERVICE);
         StorageVolume[] volumes = storageManager.getVolumeList();
+
         if (volumes.length > 0) {
             if (Settings.Secure.getInt(mContentResolver, Settings.Secure.USB_MASS_STORAGE_ENABLED, 0) == 1 ) {
                 massStorageSupported = volumes[0].allowMassStorage();
@@ -195,6 +196,7 @@ public class UsbDeviceManager {
                 massStorageSupported = false;
             }
         }
+
         mUseUsbNotification = !massStorageSupported;
 
         // make sure the ADB_ENABLED setting value matches the current state
@@ -354,14 +356,14 @@ public class UsbDeviceManager {
                 mContentResolver.registerContentObserver(
                         Settings.Secure.getUriFor(Settings.Secure.ADB_PORT),
                                 false, new AdbSettingsObserver());
-	                mContentResolver.registerContentObserver(
-	                        Settings.Secure.getUriFor(Settings.Secure.ADB_NOTIFY),
-	                                false, new ContentObserver(null) {
-	                            public void onChange(boolean selfChange) {
-	                                updateAdbNotification();
-	                            }
-	                        }
-	                );
+                mContentResolver.registerContentObserver(
+                        Settings.Secure.getUriFor(Settings.Secure.ADB_NOTIFY),
+                                false, new ContentObserver(null) {
+                            public void onChange(boolean selfChange) {
+                                updateAdbNotification();
+                            }
+                        }
+                );
 
                 // Watch for USB configuration changes
                 mUEventObserver.startObserving(USB_STATE_MATCH);

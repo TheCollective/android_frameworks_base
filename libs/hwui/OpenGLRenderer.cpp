@@ -189,7 +189,7 @@ int OpenGLRenderer::prepareDirty(float left, float top, float right, float botto
     mDirtyClip = opaque;
 
     syncState();
- 
+
 #ifndef QCOM_HARDWARE
     if (!opaque) {
 #endif
@@ -275,11 +275,11 @@ void OpenGLRenderer::resume() {
 
     mCaches.activeTexture(0);
 #ifdef QCOM_HARDWARE
-    TILERENDERING_END(previousFbo);
+    TILERENDERING_END(previousFbo, snapshot->fbo);
 #endif
     glBindFramebuffer(GL_FRAMEBUFFER, snapshot->fbo);
 #ifdef QCOM_HARDWARE
-    TILERENDERING_START(snapshot->fbo, 0, 0,
+    TILERENDERING_START(snapshot->fbo, previousFbo, 0, 0,
                         snapshot->viewport.getWidth(),
                         snapshot->viewport.getHeight(),
                         snapshot->viewport.getWidth(),
@@ -653,14 +653,9 @@ bool OpenGLRenderer::createFboLayer(Layer* layer, Rect& bounds, sp<Snapshot> sna
 
     // Bind texture to FBO
 #ifdef QCOM_HARDWARE
-    TILERENDERING_END(previousFbo);
+    TILERENDERING_END(previousFbo, layer->getFbo());
 #endif
     glBindFramebuffer(GL_FRAMEBUFFER, layer->getFbo());
-#ifdef QCOM_HARDWARE
-    TILERENDERING_START(layer->getFbo(), clip.left, clip.top,
-                        clip.right, clip.bottom,
-                        bounds.getWidth(), bounds.getHeight());
-#endif
     layer->bindTexture();
 
     // Initialize the texture if needed
@@ -676,12 +671,9 @@ bool OpenGLRenderer::createFboLayer(Layer* layer, Rect& bounds, sp<Snapshot> sna
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         ALOGE("Framebuffer incomplete (GL error code 0x%x)", status);
-#ifdef QCOM_HARDWARE
-        TILERENDERING_END(layer->getFbo(), true);
-#endif
         glBindFramebuffer(GL_FRAMEBUFFER, previousFbo);
 #ifdef QCOM_HARDWARE
-        TILERENDERING_START(previousFbo);
+        TILERENDERING_START(previousFbo, layer->getFbo(), true);
 #endif
         layer->deleteTexture();
         mCaches.fboCache.put(layer->getFbo());
@@ -689,6 +681,12 @@ bool OpenGLRenderer::createFboLayer(Layer* layer, Rect& bounds, sp<Snapshot> sna
 
         return false;
     }
+#endif
+
+#ifdef QCOM_HARDWARE
+    TILERENDERING_START(layer->getFbo(), previousFbo, clip.left, clip.bottom - bounds.getHeight(),
+                      bounds.getWidth() + clip.left, clip.bottom,
+                      bounds.getWidth(), bounds.getHeight());
 #endif
 
     // Clear the FBO, expand the clear region by 1 to get nice bilinear filtering
@@ -718,7 +716,7 @@ void OpenGLRenderer::composeLayer(sp<Snapshot> current, sp<Snapshot> previous) {
 
     if (fboLayer) {
 #ifdef QCOM_HARDWARE
-        TILERENDERING_END(current->fbo);
+        TILERENDERING_END(current->fbo, previous->fbo);
 #endif
         // Detach the texture from the FBO
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
@@ -726,7 +724,7 @@ void OpenGLRenderer::composeLayer(sp<Snapshot> current, sp<Snapshot> previous) {
         // Unbind current FBO and restore previous one
         glBindFramebuffer(GL_FRAMEBUFFER, previous->fbo);
 #ifdef QCOM_HARDWARE
-        TILERENDERING_START(previous->fbo, true);
+        TILERENDERING_START(previous->fbo, current->fbo, true);
 #endif
     }
 
@@ -1198,7 +1196,6 @@ void OpenGLRenderer::setupDrawColor(int color) {
 
 void OpenGLRenderer::setupDrawColor(int color, int alpha) {
     mColorA = alpha / 255.0f;
-    mColorA *= mSnapshot->alpha;
     // Second divide of a by 255 is an optimization, allowing us to simply multiply
     // the rgb values by a instead of also dividing by 255
     const float a = mColorA / 255.0f;
@@ -1228,15 +1225,6 @@ void OpenGLRenderer::setupDrawColor(float r, float g, float b, float a) {
     mColorB = b;
     mColorSet = true;
     mSetShaderColor = mDescription.setColor(r, g, b, a);
-}
-
-void OpenGLRenderer::setupDrawAlpha8Color(float r, float g, float b, float a) {
-    mColorA = a;
-    mColorR = r;
-    mColorG = g;
-    mColorB = b;
-    mColorSet = true;
-    mSetShaderColor = mDescription.setAlpha8Color(r, g, b, a);
 }
 
 void OpenGLRenderer::setupDrawShader() {
@@ -1820,7 +1808,7 @@ void OpenGLRenderer::drawAARect(float left, float top, float right, float bottom
     setupDraw();
     setupDrawNoTexture();
     setupDrawAALine();
-    setupDrawColor(color);
+    setupDrawColor(color, ((color >> 24) & 0xFF) * mSnapshot->alpha);
     setupDrawColorFilter();
     setupDrawShader();
     setupDrawBlending(true, mode);
@@ -2316,7 +2304,7 @@ status_t OpenGLRenderer::drawRect(float left, float top, float right, float bott
 status_t OpenGLRenderer::drawPosText(const char* text, int bytesCount, int count,
         const float* positions, SkPaint* paint) {
     if (text == NULL || count == 0 || mSnapshot->isIgnored() ||
-            (paint->getAlpha() == 0 && paint->getXfermode() == NULL)) {
+            (paint->getAlpha() * mSnapshot->alpha == 0 && paint->getXfermode() == NULL)) {
         return DrawGlInfo::kStatusDone;
     }
 
@@ -2389,7 +2377,7 @@ status_t OpenGLRenderer::drawPosText(const char* text, int bytesCount, int count
 status_t OpenGLRenderer::drawText(const char* text, int bytesCount, int count,
         float x, float y, SkPaint* paint, float length) {
     if (text == NULL || count == 0 || mSnapshot->isIgnored() ||
-            (paint->getAlpha() == 0 && paint->getXfermode() == NULL)) {
+            (paint->getAlpha() * mSnapshot->alpha == 0 && paint->getXfermode() == NULL)) {
         return DrawGlInfo::kStatusDone;
     }
 
@@ -2442,7 +2430,7 @@ status_t OpenGLRenderer::drawText(const char* text, int bytesCount, int count,
         const float sx = oldX - shadow->left + mShadowDx;
         const float sy = oldY - shadow->top + mShadowDy;
 
-        const int shadowAlpha = ((mShadowColor >> 24) & 0xFF);
+        const int shadowAlpha = ((mShadowColor >> 24) & 0xFF) * mSnapshot->alpha;
         int shadowColor = mShadowColor;
         if (mShader) {
             shadowColor = 0xffffffff;
@@ -2841,7 +2829,7 @@ void OpenGLRenderer::drawColorRect(float left, float top, float right, float bot
 
     setupDraw();
     setupDrawNoTexture();
-    setupDrawColor(color);
+    setupDrawColor(color, ((color >> 24) & 0xFF) * mSnapshot->alpha);
     setupDrawShader();
     setupDrawColorFilter();
     setupDrawBlending(mode);

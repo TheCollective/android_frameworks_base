@@ -1625,6 +1625,19 @@ public final class Settings {
         public static final String MODE_RINGER = "mode_ringer";
 
         /**
+         * User interface mode. This is used to change the UI mode forcing it to
+         * Change into tablet mode. Default is disabled. 
+         */
+        public static final String MODE_TABLET_UI = "mode_tabletui";
+
+        /**
+         * User interface mode. This is used to change from singlepane mode forcing it to
+         * Change into multipane mode. Default is disabled. 
+         */
+        public static final String FORCE_DUAL_PANEL = "force_dualpanel";
+
+
+        /**
          * Determines which streams are affected by ringer mode changes. The
          * stream type's bit should be set to 1 if it should be muted when going
          * into an inaudible ringer mode.
@@ -1787,7 +1800,7 @@ public final class Settings {
          */
         public static final Uri DEFAULT_RINGTONE_URI = getUriFor(RINGTONE);
 
-        public static final Uri DEFAULT_VIBRATION_URI = Uri.parse("content://com.aokp.romcontrol.Vibrations/vibrations/0");
+        public static final Uri DEFAULT_VIBRATION_URI = Uri.parse("content://com.collective.personalize.Vibrations/vibrations/0");
         
         public static final String PHONE_VIBRATION = "phone_vibration"; 
 
@@ -1931,17 +1944,16 @@ public final class Settings {
 
         /**
          * Control the type of rotation which can be performed using the accelerometer
-	 * if ACCELEROMETER_ROTATION is enabled.
+         * if ACCELEROMETER_ROTATION is enabled.
          * Value is a bitwise combination of
          * 1 = 0 degrees (portrait)
          * 2 = 90 degrees (left)
          * 4 = 180 degrees (inverted portrait)
          * 8 = 270 degrees (right)
          * Setting to 0 is effectively orientation lock
-	 * @hide
+         * @hide
          */
         public static final String ACCELEROMETER_ROTATION_ANGLES = "accelerometer_rotation_angles";
-
 
         /**
          * Default screen rotation when no other policy applies.
@@ -2064,6 +2076,11 @@ public final class Settings {
          */
         public static final String NOTIFICATION_LIGHT_PULSE = "notification_light_pulse";
 
+        /** Sprint MWI Quirk: Show message wait indicator notifications
+         * @hide
+         */
+        public static final String ENABLE_MWI_NOTIFICATION = "enable_mwi_notification";
+
         /**
          * Show pointer location on screen?
          * 0 = no
@@ -2073,12 +2090,27 @@ public final class Settings {
         public static final String POINTER_LOCATION = "pointer_location";
 
         /**
+         * Show icon when stylus is used?
+         * 0 = no
+         * 1 = yes
+         * @hide
+         */
+        public static final String STYLUS_ICON_ENABLED = "stylus_icon_enabled";
+
+        /**
          * Show touch positions on screen?
          * 0 = no
          * 1 = yes
          * @hide
          */
         public static final String SHOW_TOUCHES = "show_touches";
+
+        /**
+         * The keylayout that will be used by EventHub instead of the default
+         * one.
+         * @hide
+         */
+        public static final String KEYLAYOUT_OVERRIDES = "keylayout";
 
         /**
          * Log raw orientation data from {@link WindowOrientationListener} for use with the
@@ -2113,6 +2145,12 @@ public final class Settings {
          * @hide
          */
         public static final String LOCKSCREEN_DISABLED = "lockscreen.disabled";
+
+        /**
+         * Whether to enable lockscreen rotation
+         * @hide
+         */
+        public static final String LOCKSCREEN_AUTO_ROTATE = "com.android.internal.R.config_enableLockScreenRotation";
 
         /**
          * URI for the low battery sound file.
@@ -2200,6 +2238,20 @@ public final class Settings {
          * @hide
          */
         public static final String POINTER_SPEED = "pointer_speed";
+
+        /**
+         * Whether national data roaming should be used.
+         * @hide
+         */
+        public static final String MVNO_ROAMING = "mvno_roaming";
+
+        /**
+         * Control the display of the action overflow button within app UI.
+         * 0 = use system default
+         * 1 = force on
+         * @hide
+         */
+        public static final String UI_FORCE_OVERFLOW_BUTTON = "ui_force_overflow_button";
 
         /**
          * Settings to backup. This is here so that it's in the same place as the settings
@@ -2509,11 +2561,11 @@ public final class Settings {
          */
         public static final String ENABLE_VOLUME_OPTIONS = "enable_volume_options";
 
-	/**
-         * Whether to use the menu key to unlock lockscreen
+        /**
+         * Whether to use the menu key to unlock the screen
          * @hide
          */
-        public static final String LOCKSCREEN_MENU_UNLOCK = "lockscreen_menu_unlock";       
+        public static final String LOCKSCREEN_MENU_UNLOCK = "lockscreen_menu_unlock";
 
         /**
          * Whether to use the custom quick unlock screen control
@@ -2537,6 +2589,12 @@ public final class Settings {
          */
         public static final String TABLET_UI = "tablet_ui";
 
+        /**
+         * Show the NavBar dialog in Power menu
+         * @hide
+         */
+        public static final String POWER_DIALOG_SHOW_NAVBAR_HIDE = "power_dialog_show_navbar_hide";
+
          /**
          * @hide
          */
@@ -2548,9 +2606,18 @@ public final class Settings {
         public static final String POWER_DIALOG_SHOW_AIRPLANE_TOGGLE = "power_dialog_show_airplane_toggle";
 
          /**
+          * Used to determine if the NavBar should be enabled on devices that do not
+          * otherwise have a NavBar
          * @hide
          */
         public static final String NAVIGATION_BAR_SHOW = "navigation_bar_show";
+
+        /**
+         * Used to determine if NavBar is currently shown or hidden as a user choice
+         *
+         * @hide
+         */
+        public static final String NAVIGATION_BAR_SHOW_NOW = "navigation_bar_show_now";
 
          /**
          * Navigation bar height in portrait
@@ -2569,6 +2636,91 @@ public final class Settings {
          * @hide
          */
         public static final String NAVIGATION_BAR_WIDTH = "navigation_bar_width";
+
+         /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_1 = "systemui_navring_1";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_2 = "systemui_navring_2";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_3 = "systemui_navring_3";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_4 = "systemui_navring_4";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_5 = "systemui_navring_5";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_AMOUNT = "systemui_navring_amount";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_ASSIST = "assist";
+
+        /**
+         * hide
+         */
+        public static final String SYSTEMUI_SOFTKEY_REBOOT = "reboot";
+
+        /**
+         * hide
+         */
+        public static final String SYSTEMUI_SOFTKEY_SCREENSHOT = "screenshot";
+
+        /**
+         * hide
+         */
+        public static final String SYSTEMUI_SOFTKEY_SCREENOFF = "screenoff";
+
+        /**
+         * hide
+         */
+		public static final String SYSTEMUI_SOFTKEY_IME_SWITCHER = "ime_switcher";
+
+        /**
+         * hide
+         */
+		public static final String SYSTEMUI_SOFTKEY_RING_VIB = "ring_vib";
+
+        /**
+         * hide
+         */
+		public static final String SYSTEMUI_SOFTKEY_RING_SILENT = "ring_silent";
+
+        /**
+         * hide
+         */
+		public static final String SYSTEMUI_SOFTKEY_RING_VIB_SILENT = "ring_vib_silent";
+		
+        /**
+         * hide
+         */
+        public static final String SYSTEMUI_SOFTKEY_KILL_PROCESS = "killcurrent";
+
+        /**
+         * @hide
+         */
+        public static final String SYSTEMUI_NAVRING_OVERRIDE_HOME = "systemui_navring_override_home";
+
+        /**
+         * @hide
+         */
+        public static final int SYSTEMUI_NAVRING_OVERRIDE_HOME_DEF = 0;
 
         /**
          * whether volume keys wake the screen. boolean value
@@ -2675,12 +2827,10 @@ public final class Settings {
          */
         public static final String STATUSBAR_CLOCK_STYLE = "statusbar_clock_style";
 
-	    /**
-         * @hide
-         * Clockcolor
-         * user set
-	    */
-	    public static final String STATUSBAR_CLOCK_COLOR = "statusbar_clock_color";
+        /**
+        * @hide
+        */
+        public static final String STATUSBAR_CLOCK_COLOR = "statusbar_clock_color";
 
         /**
          * @hide
@@ -2872,78 +3022,6 @@ public final class Settings {
         public static final String QUIET_HOURS_DIM = "quiet_hours_dim";
 
         /**
-         * Used to determine if NavBar is currently shown or hidden as a user choice
-         *
-         * @hide
-         */
-        public static final String NAVIGATION_BAR_SHOW_NOW = "navigation_bar_show_now";
-
-         /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_1 = "systemui_navring_1";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_2 = "systemui_navring_2";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_3 = "systemui_navring_3";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_4 = "systemui_navring_4";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_5 = "systemui_navring_5";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_AMOUNT = "systemui_navring_amount";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_ASSIST = "assist";
-
-        /**
-* hide
-*/
-        public static final String SYSTEMUI_SOFTKEY_REBOOT = "reboot";
-
-        /**
-* hide
-*/
-        public static final String SYSTEMUI_SOFTKEY_SCREENSHOT = "screenshot";
-
-        /**
-* hide
-*/
-        public static final String SYSTEMUI_SOFTKEY_SCREENOFF = "screenoff";
-
-        /**
-* hide
-*/
-        public static final String SYSTEMUI_SOFTKEY_KILL_PROCESS = "killcurrent";
-
-        /**
-* @hide
-*/
-        public static final String SYSTEMUI_NAVRING_OVERRIDE_HOME = "systemui_navring_override_home";
-
-        /**
-* @hide
-*/
-        public static final int SYSTEMUI_NAVRING_OVERRIDE_HOME_DEF = 0;
-
-        /**
          * where to show the legacy menu key
          * 0 = right (default)
          * 1 = left
@@ -2961,11 +3039,12 @@ public final class Settings {
         public static final String MENU_VISIBILITY = "menu_visibility";
 
         /**
-	 * IME Switcher
+         * IME Switcher
          *
-	 * @hide
+         * @hide
          */
-	public static final String SHOW_STATUSBAR_IME_SWITCHER = "show_statusbar_ime_switcher";
+        public static final String SHOW_STATUSBAR_IME_SWITCHER = "show_statusbar_ime_switcher";
+
 
         /**
          * Number of custom navbar buttons
@@ -2985,6 +3064,8 @@ public final class Settings {
                 "navigation_custom_app_intent_2",
                 "navigation_custom_app_intent_3",
                 "navigation_custom_app_intent_4",
+                "navigation_custom_app_intent_5",
+                "navigation_custom_app_intent_6",
         };
 
         /**
@@ -2998,6 +3079,8 @@ public final class Settings {
                 "navigation_longpress_app_intent_2",
                 "navigation_longpress_app_intent_3",
                 "navigation_longpress_app_intent_4",
+                "navigation_longpress_app_intent_5",
+                "navigation_longpress_app_intent_6",
         };
 
         /**
@@ -3013,6 +3096,8 @@ public final class Settings {
                 "navigation_custom_app_icon_2",
                 "navigation_custom_app_icon_3",
                 "navigation_custom_app_icon_4",
+                "navigation_custom_app_icon_5",
+                "navigation_custom_app_icon_6",
         };
 
         /**
@@ -3061,27 +3146,22 @@ public final class Settings {
          * Custom string for package;color|pacakge;color
          * so we can change custom colors per app
          * @hide
-	 */
+         */
         public static final String LED_CUSTOM_VALUES = "led_custom_values";
 
         /**
-	 * What brightness to use for the notificaion LED
-	 * @hide
-	 */
-        public static final String LED_BRIGHTNESS = "led_brightness";
-	         
-        /**
-	 *
-	 * @hide
-	 */
-        public static final String NAVIGATION_BAR_BUTTON_ALPHA = "navigation_bar_button_alpha";
-        
-        /**
-         * How to show weather on the statusbar
+         * What brightness to use for the notificaion LED
          *
          * @hide
          */
-        public static final String STATUSBAR_WEATHER_STYLE = "statusbar_weather_style";
+        public static final String LED_BRIGHTNESS = "led_brightness";
+
+
+        /**
+	     *
+	     * @hide
+	     */
+        public static final String NAVIGATION_BAR_BUTTON_ALPHA = "navigation_bar_button_alpha";
 
         /**
          * @hide
@@ -3099,14 +3179,6 @@ public final class Settings {
          * @hide
          */
         public static final String MUTE_ANNOYING_NOTIFICATIONS_THRESHOLD = "mute_annoying_notifications_threshold";
-	    
-		/**
-         * A Kill All Button for the recents apps screen
-         * one press kills all cached app processes freeing ram
-         * @hide
-         */
-	public static final String RECENT_KILL_ALL_BUTTON = "recent_kill_all_button";
-
 
         /**
          * Holds the text for the Carrier Label. An empty string will bring
@@ -3121,6 +3193,13 @@ public final class Settings {
          * @hide
          */
         public static final String RECENT_KILL_ALL_BUTTON = "recent_kill_all_button";
+
+        /**
+         * whether to enable end app on back longpress functionality
+         *
+         * @hide
+         */
+        public static final String KILL_APP_LONGPRESS_BACK = "kill_app_longpress_back";
 
         /**
          * Whether to show statusbar signal text
@@ -3156,6 +3235,22 @@ public final class Settings {
          * @hide
          */
         public static final String STATUSBAR_WIFI_SIGNAL_TEXT_COLOR = "statusbar_wifi_signal_text_color";
+
+        /**
+         * use Alt Statusbar Signal Layout
+         * boolean
+         *
+         * @hide
+         */
+        public static final String STATUSBAR_SIGNAL_CLUSTER_ALT = "statusbar_signal_cluster_alt";
+        
+        /**
+         * use Alt Activity Resolver Grid (GB style)
+         * boolean
+         *
+         * @hide
+         */
+        public static final String ACTIVITY_RESOLVER_USE_ALT = "activity_resolver_use_alt";
     }
 
     /**
@@ -3463,8 +3558,8 @@ public final class Settings {
         public static final String ADB_PORT = "adb_port";
 
         /**
-         *Display ADB notifaction 
-         *@hide
+         * Whether to display the ADB notification.
+         * @hide
          */
         public static final String ADB_NOTIFY = "adb_notify";
 
@@ -4292,14 +4387,6 @@ public final class Settings {
          */
         public static final String CDMA_CELL_BROADCAST_SMS =
                 "cdma_cell_broadcast_sms";
-
-        /**
-         * The cdma subscription 0 = Subscription from RUIM, when available
-         *                       1 = Subscription from NV
-         * @hide
-         */
-        //public static final String PREFERRED_CDMA_SUBSCRIPTION =
-        //       "preferred_cdma_subscription";
 
         /**
          * Whether the enhanced voice privacy mode is enabled.

@@ -20,6 +20,7 @@ import com.android.internal.R;
 
 import com.android.internal.app.ThemeUtils;
 
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -30,6 +31,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Canvas;
 import android.os.IBinder;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -126,7 +128,8 @@ public class KeyguardViewManager implements KeyguardWindowController {
         Resources res = getUiContext().getResources();
         boolean enableScreenRotation =
                 SystemProperties.getBoolean("lockscreen.rot_override",false)
-                || res.getBoolean(R.bool.config_enableLockScreenRotation);
+                || Settings.System.getBoolean(mContext
+                        .getContentResolver(), Settings.System.LOCKSCREEN_AUTO_ROTATE, false);
         if (mKeyguardHost == null) {
             if (DEBUG) Log.d(TAG, "keyguard host is null, creating it...");
 
@@ -165,7 +168,7 @@ public class KeyguardViewManager implements KeyguardWindowController {
 
         if (enableScreenRotation) {
             if (DEBUG) Log.d(TAG, "Rotation sensor for lock screen On!");
-            mWindowLayoutParams.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR;
+            mWindowLayoutParams.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_USER;
         } else {
             if (DEBUG) Log.d(TAG, "Rotation sensor for lock screen Off!");
             mWindowLayoutParams.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_NOSENSOR;

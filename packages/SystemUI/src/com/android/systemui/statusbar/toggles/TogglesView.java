@@ -53,7 +53,7 @@ public class TogglesView extends LinearLayout {
     private static final String TOGGLE_SILENT = "SILENT";
     private static final String TOGGLE_TORCH = "TORCH";
     private static final String TOGGLE_SYNC = "SYNC";
-    private static final String TOGGLE_PIMPED = "PIMPED";
+    private static final String TOGGLE_SWAGGER = "SWAGGER";
     private static final String TOGGLE_FCHARGE = "FCHARGE";
     private static final String TOGGLE_TETHER = "TETHER";
     private static final String TOGGLE_NFC = "NFC";
@@ -63,11 +63,8 @@ public class TogglesView extends LinearLayout {
 
     private BaseStatusBar sb;
 
-    public static final String STOCK_TOGGLES = TOGGLE_WIFI + TOGGLE_DELIMITER
-            + TOGGLE_BLUETOOTH + TOGGLE_DELIMITER + TOGGLE_GPS
-            + TOGGLE_DELIMITER + TOGGLE_AUTOROTATE + TOGGLE_DELIMITER
-            + TOGGLE_DELIMITER + TOGGLE_VIBRATE
-            + TOGGLE_DELIMITER + TOGGLE_SYNC + TOGGLE_DELIMITER + TOGGLE_SILENT;
+    public String[] defaultToggles = getResources().getStringArray(R.array.default_toggles);
+    public String STOCK_TOGGLES = getDefaultToggles(defaultToggles);
 
     View mBrightnessSlider;
 
@@ -92,7 +89,7 @@ public class TogglesView extends LinearLayout {
     }
 
     private void addToggles(String userToggles) {
-        if (userToggles == null)
+        if (userToggles == null) 
             userToggles = STOCK_TOGGLES;
 
         Log.e(TAG, userToggles);
@@ -129,8 +126,8 @@ public class TogglesView extends LinearLayout {
                 newToggle = new TorchToggle(mContext);
             else if (splitToggle.equals(TOGGLE_SYNC))
                 newToggle = new SyncToggle(mContext);
-            else if (splitToggle.equals(TOGGLE_PIMPED))
-                newToggle = new PimpedToggle(mContext);
+            else if (splitToggle.equals(TOGGLE_SWAGGER))
+                newToggle = new SwaggerToggle(mContext);
             else if (splitToggle.equals(TOGGLE_FCHARGE))
                 newToggle = new FChargeToggle(mContext);
             else if (splitToggle.equals(TOGGLE_TETHER))
@@ -146,7 +143,8 @@ public class TogglesView extends LinearLayout {
 
     private void addBrightness() {
         rows.add(new LinearLayout(mContext));
-        rows.get(rows.size() - 1).addView(new BrightnessSlider(mContext).getView(), PARAMS_BRIGHTNESS);
+        rows.get(rows.size() - 1).addView(
+                new BrightnessSlider(mContext).getView(), PARAMS_BRIGHTNESS);
     }
 
     private void addViews() {
@@ -170,8 +168,11 @@ public class TogglesView extends LinearLayout {
                 // new row
                 rows.add(new LinearLayout(mContext));
             }
-            rows.get(rows.size() - 1).addView(toggles.get(i).getView(),
-                    (useAltButtonLayout ? PARAMS_TOGGLE_SCROLL : PARAMS_TOGGLE));
+            rows.get(rows.size() - 1)
+                    .addView(
+                            toggles.get(i).getView(),
+                            (useAltButtonLayout ? PARAMS_TOGGLE_SCROLL
+                                    : PARAMS_TOGGLE));
         }
 
         if (!useAltButtonLayout && (toggles.size() % 2 != 0)) {
@@ -182,7 +183,8 @@ public class TogglesView extends LinearLayout {
         }
         if (useAltButtonLayout) {
             LinearLayout togglesRowLayout;
-            HorizontalScrollView toggleScrollView = new HorizontalScrollView(mContext);
+            HorizontalScrollView toggleScrollView = new HorizontalScrollView(
+                    mContext);
             // ToggleScrollView.setFillViewport(true);
             try {
                 togglesRowLayout = rows.get(rows.size() - 1);
@@ -230,8 +232,8 @@ public class TogglesView extends LinearLayout {
         float fpixels = metrics.density * dp;
         int pixels = (int) (metrics.density * dp + 0.5f);
 
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,
-                pixels);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, pixels);
 
         sep.setLayoutParams(params);
 
@@ -270,6 +272,12 @@ public class TogglesView extends LinearLayout {
             resolver.registerContentObserver(Settings.System
                     .getUriFor(Settings.System.STATUSBAR_TOGGLES_ALPHA),
                     false, this);
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUSBAR_TOGGLES_BACKGROUND),
+                    false, this);
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUSBAR_TOGGLES_TEXT_COLOR),
+                    false, this);
             updateSettings();
         }
 
@@ -289,7 +297,8 @@ public class TogglesView extends LinearLayout {
                 Settings.System.STATUSBAR_TOGGLES_STYLE, STYLE_ICON);
 
         mBrightnessLocation = Settings.System.getInt(resolver,
-                Settings.System.STATUSBAR_TOGGLES_BRIGHTNESS_LOC, BRIGHTNESS_LOC_TOP);
+                Settings.System.STATUSBAR_TOGGLES_BRIGHTNESS_LOC,
+                BRIGHTNESS_LOC_NONE);
 
         useAltButtonLayout = Settings.System.getInt(
                 mContext.getContentResolver(),
@@ -340,5 +349,16 @@ public class TogglesView extends LinearLayout {
 
         SettingsObserver settingsObserver = new SettingsObserver(new Handler());
         settingsObserver.observe();
+    }
+
+    public String getDefaultToggles(String[] defaultToggles) {
+        StringBuilder stockToggles = new StringBuilder();
+        for(int i = 0; i < defaultToggles.length; i++) {
+            stockToggles.append(defaultToggles[i]);
+            if(i != defaultToggles.length - 1) {
+                stockToggles.append(TOGGLE_DELIMITER);
+            }
+        }
+        return stockToggles.toString();
     }
 }

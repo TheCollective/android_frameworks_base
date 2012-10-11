@@ -390,8 +390,13 @@ public class InputMethodManagerService extends IInputMethodManager.Stub
                     Settings.Secure.ENABLED_INPUT_METHODS), false, this);
             resolver.registerContentObserver(Settings.Secure.getUriFor(
                     Settings.Secure.SELECTED_INPUT_METHOD_SUBTYPE), false, this);
-            resolver.registerContentObserver(Settings.Secure.getUriFor(
-                    Settings.System.SHOW_STATUSBAR_IME_SWITCHER), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.SHOW_STATUSBAR_IME_SWITCHER),
+                    false, new ContentObserver(mHandler) {
+                        public void onChange(boolean selfChange) {
+                            updateFromSettingsLocked();
+                        }
+                    });
         }
 
         @Override public void onChange(boolean selfChange) {
@@ -767,10 +772,6 @@ public class InputMethodManagerService extends IInputMethodManager.Stub
                 mStatusBar = statusBar;
                 statusBar.setIconVisibility("ime", false);
                 updateImeWindowStatusLocked();
-               // mShowOngoingImeSwitcherForPhones = mRes.getBoolean(
-               //         com.android.internal.R.bool.show_ongoing_ime_switcher);
-                mShowOngoingImeSwitcherForPhones = mRes.getBoolean(
-                        com.android.internal.R.bool.show_ongoing_ime_switcher);
                 if (mShowOngoingImeSwitcherForPhones) {
                     mWindowManagerService.setOnHardKeyboardStatusChangeListener(
                             mHardKeyboardListener);
@@ -1438,8 +1439,8 @@ public class InputMethodManagerService extends IInputMethodManager.Stub
             unbindCurrentMethodLocked(true);
         }
 
-	mShowOngoingImeSwitcherForPhones = Settings.System.getBoolean(mContext.getContentResolver(),
-	        Settings.System.SHOW_STATUSBAR_IME_SWITCHER, true);
+        mShowOngoingImeSwitcherForPhones = Settings.System.getBoolean(mContext.getContentResolver(),
+                Settings.System.SHOW_STATUSBAR_IME_SWITCHER, true);
     }
 
     /* package */ void setInputMethodLocked(String id, int subtypeId) {

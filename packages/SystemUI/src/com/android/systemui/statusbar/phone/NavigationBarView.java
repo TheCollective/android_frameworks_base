@@ -102,6 +102,7 @@ public class NavigationBarView extends LinearLayout {
     final static String ACTION_HOME = "**home**";
     final static String ACTION_BACK = "**back**";
     final static String ACTION_SEARCH = "**search**";
+    final static String ACTION_SCREENSHOT = "**screenshot**";
     final static String ACTION_MENU = "**menu**";
     final static String ACTION_POWER = "**power**";
     final static String ACTION_NOTIFICATIONS = "**notifications**";
@@ -118,17 +119,17 @@ public class NavigationBarView extends LinearLayout {
      */
     int mTablet_UI = 0;
 
-    public String[] mClickActions = new String[5];
-    public String[] mLongpressActions = new String[5];
-    public String[] mPortraitIcons = new String[5];
+    public String[] mClickActions = new String[7];
+    public String[] mLongpressActions = new String[7];
+    public String[] mPortraitIcons = new String[7];
 
     public final static int StockButtonsQty = 3;
     public final static String[] StockClickActions = {
-            "**back**", "**home**", "**recents**", "**null**", "**null**"
+            "**back**", "**home**", "**recents**", "**null**", "**null**", "**null**", "**null**"
     };
 
     public final static String[] StockLongpress = {
-            "**null**", "**null**", "**null**", "**null**", "**null**"
+            "**null**", "**null**", "**null**", "**null**", "**null**", "**null**", "**null**"
     };
     FrameLayout rot0;
     FrameLayout rot90;
@@ -796,7 +797,7 @@ public class NavigationBarView extends LinearLayout {
                     Settings.System.getUriFor(Settings.System.NAVIGATION_BAR_BUTTONS_QTY), false,
                     this);
 
-            for (int j = 0; j < 5; j++) { // watch all 5 settings for changes.
+            for (int j = 0; j < 7; j++) { // watch all 5 settings for changes.
                 resolver.registerContentObserver(
                         Settings.System.getUriFor(Settings.System.NAVIGATION_CUSTOM_ACTIVITIES[j]),
                         false,
@@ -838,7 +839,7 @@ public class NavigationBarView extends LinearLayout {
                     Settings.System.NAVIGATION_BAR_BUTTONS_QTY, StockButtonsQty);
         }
 
-        for (int j = 0; j < 5; j++) {
+        for (int j = 0; j < 7; j++) {
             mClickActions[j] = Settings.System.getString(resolver,
                     Settings.System.NAVIGATION_CUSTOM_ACTIVITIES[j]);
             if (mClickActions[j] == null) {
@@ -880,6 +881,8 @@ public class NavigationBarView extends LinearLayout {
                 return getResources().getDrawable(R.drawable.ic_sysbar_recent);
             } else if (uri.equals(ACTION_SEARCH)) {
                 return getResources().getDrawable(R.drawable.ic_sysbar_search);
+            } else if (uri.equals(ACTION_SCREENSHOT)) {
+                return getResources().getDrawable(R.drawable.ic_sysbar_screenshot);
             } else if (uri.equals(ACTION_MENU)) {
                 return getResources().getDrawable(R.drawable.ic_sysbar_menu_big);
             } else if (uri.equals(ACTION_IME)) {

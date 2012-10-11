@@ -41,6 +41,7 @@ import android.os.Message;
 import android.os.Parcel;
 import android.os.PowerManager;
 import android.os.SystemProperties;
+import android.os.Registrant;
 import android.os.PowerManager.WakeLock;
 import android.telephony.NeighboringCellInfo;
 import android.telephony.PhoneNumberUtils;
@@ -82,6 +83,7 @@ class RILRequest {
     //***** Instance Variables
     int mSerial;
     int mRequest;
+    long creationTime;
     Message mResult;
     Parcel mp;
     RILRequest mNext;
@@ -114,6 +116,7 @@ class RILRequest {
         }
         rr.mRequest = request;
         rr.mResult = result;
+        rr.creationTime = System.currentTimeMillis();
         rr.mp = Parcel.obtain();
 
         if (result != null && result.getTarget() == null) {
@@ -239,6 +242,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
     // When we are testing emergency calls
     AtomicBoolean mTestingEmergencyCall = new AtomicBoolean(false);
 
+    // Number of per-network elements expected in QUERY_AVAILABLE_NETWORKS's response.
+    // 4 elements is default, but many RILs actually return 5, making it impossible to
+    // divide the response array without prior knowledge of the number of elements.
+    protected int mQANElements = 4;
+
     //***** Events
 
     static final int EVENT_SEND                 = 1;
@@ -273,6 +281,26 @@ public class RIL extends BaseCommands implements CommandsInterface {
             }
         }
     };
+
+    protected Registrant mCatSendSmsResultRegistrant;
+    /**
+     * samsung stk service implementation - set up registrant for sending
+     * sms send result from modem(RIL) to catService
+     * @param h
+     * @param what
+     * @param obj
+     */
+    public void setOnCatSendSmsResult(Handler h, int what, Object obj) {
+        mCatSendSmsResultRegistrant = new Registrant(h, what, obj);
+    }
+
+    /**
+     *
+     * @param h
+     */
+    public void unSetOnCatSendSmsResult(Handler h) {
+        mCatSendSmsResultRegistrant.clear();
+    }
 
     class RILSender extends Handler implements Runnable {
         public RILSender(Looper looper) {
@@ -652,8 +680,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     //***** CommandsInterface implementation
-
-    public void getVoiceRadioTechnology(Message result) {
+    @Override public void 
+    getVoiceRadioTechnology(Message result) {
         RILRequest rr = RILRequest.obtain(RIL_REQUEST_VOICE_RADIO_TECH, result);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
@@ -919,8 +947,17 @@ public class RIL extends BaseCommands implements CommandsInterface {
     getIMSIForApp(String aid, Message result) {
         RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_IMSI, result);
 
-        rr.mp.writeInt(1);
-        rr.mp.writeString(aid);
+        boolean oldRil = needsOldRilFeature("skipnullaid");
+
+        if (oldRil) {
+                if (aid != null) {
+                        rr.mp.writeInt(1);
+                        rr.mp.writeString(aid);
+                }
+        } else {
+                rr.mp.writeInt(1);
+                rr.mp.writeString(aid);
+        }
 
         if (RILJ_LOGD) riljLog(rr.serialString() +
                               "> getIMSI: " + requestToString(rr.mRequest)
@@ -2513,6 +2550,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE: ret = responseVoid(p); break;
             case RIL_UNSOL_RIL_CONNECTED: ret = responseInts(p); break;
             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: ret =  responseInts(p); break;
+            //samsung stk service implementation
+            case RIL_UNSOL_STK_SEND_SMS_RESULT: ret = responseInts(p); break;
 
             default:
                 throw new RuntimeException("Unrecognized unsol response: " + response);
@@ -2874,6 +2913,19 @@ public class RIL extends BaseCommands implements CommandsInterface {
                 notifyRegistrantsRilConnectionChanged(((int[])ret)[0]);
                 break;
             }
+
+            //samsung stk service implementation
+            case RIL_UNSOL_STK_SEND_SMS_RESULT:
+                if (Resources.getSystem().
+                        getBoolean(com.android.internal.R.bool.config_samsung_stk)) {
+                    if (RILJ_LOGD) unsljLogRet(response, ret);
+
+                    if (mCatSendSmsResultRegistrant != null) {
+                        mCatSendSmsResultRegistrant.notifyRegistrant(
+                                new AsyncResult (null, ret, null));
+                    }
+                }
+                break;
         }
     }
 
@@ -3171,7 +3223,9 @@ public class RIL extends BaseCommands implements CommandsInterface {
             dataCall.cid = p.readInt();
             dataCall.active = p.readInt();
             dataCall.type = p.readString();
-            p.readString(); // APN - not used
+            if (version < 4 || needsOldRilFeature("datacallapn")) {
+                p.readString(); // APN - not used
+            }
             String addresses = p.readString();
             if (!TextUtils.isEmpty(addresses)) {
                 dataCall.addresses = addresses.split(" ");
@@ -3277,15 +3331,15 @@ public class RIL extends BaseCommands implements CommandsInterface {
         String strings[] = (String [])responseStrings(p);
         ArrayList<OperatorInfo> ret;
 
-        if (strings.length % 4 != 0) {
+        if (strings.length % mQANElements != 0) {
             throw new RuntimeException(
                 "RIL_REQUEST_QUERY_AVAILABLE_NETWORKS: invalid response. Got "
-                + strings.length + " strings, expected multible of 4");
+                + strings.length + " strings, expected multiple of " + mQANElements);
         }
 
-        ret = new ArrayList<OperatorInfo>(strings.length / 4);
+        ret = new ArrayList<OperatorInfo>(strings.length / mQANElements);
 
-        for (int i = 0 ; i < strings.length ; i += 4) {
+        for (int i = 0 ; i < strings.length ; i += mQANElements) {
             ret.add (
                 new OperatorInfo(
                     strings[i+0],
@@ -3695,6 +3749,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE: return "UNSOL_EXIT_EMERGENCY_CALLBACK_MODE";
             case RIL_UNSOL_RIL_CONNECTED: return "UNSOL_RIL_CONNECTED";
             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: return "UNSOL_VOICE_RADIO_TECH_CHANGED";
+            case RIL_UNSOL_STK_SEND_SMS_RESULT: return "RIL_UNSOL_STK_SEND_SMS_RESULT";
             default: return "<unknown response: "+request+">";
         }
     }

@@ -249,8 +249,11 @@
     <!-- Common options are [1, 4] for TYPE_WIFI and TYPE_MOBILE_DUN or
     <!== [0,1,5,7] for TYPE_MOBILE, TYPE_WIFI, TYPE_MOBILE_HIPRI and TYPE_BLUETOOTH -->
     <integer-array translatable="false" name="config_tether_upstream_types">
+        <item>0</item>
         <item>1</item>
-        <item>4</item>
+        <item>5</item>
+        <item>7</item>
+        <item>9</item>
     </integer-array>
 
     <!-- If the DUN connection for this CDMA device supports more than just DUN -->
@@ -268,6 +271,10 @@
 
     <!-- Boolean indicating whether Softap requires reloading AP firmware -->
     <bool name="config_wifiApFirmwareReload">true</bool>
+
+    <!-- Boolean indicating whether the start command should be called on the wireless interface
+         when starting the SoftAp -->
+    <bool name="config_wifiApStartInterface">false</bool>
 
     <!-- Boolean indicating whether the wifi chipset has dual frequency band support -->
     <bool translatable="false" name="config_wifi_dual_band_support">false</bool>
@@ -895,6 +902,10 @@
     <!-- Name of that key handler class -->
     <string name="config_deviceKeyHandlerClass" translatable="false"></string>
 
+    <!-- Timeout in MS for how long you have to long-press the back key to
+         kill the foreground app. -->
+    <integer name="config_backKillTimeout">750</integer>
+
     <!-- If this value is true, we handle Samsung CDMA's message ID method -->
     <bool name="config_smsSamsungCdmaAlternateMessageIDEncoding">false</bool>
 
@@ -903,9 +914,15 @@
 
     <!-- Boolean to enable stk functionality on Samsung phones -->
     <bool name="config_samsung_stk">false</bool>
-    
-     <!-- Timeout in MS for how long you have to long-press the back key to
-kill the foreground app. -->
-    <integer name="config_backKillTimeout">1500</integer>
 
+    <!-- If a dock provides a lid switch, that lid can be removed. This
+         setting is used to determine, whether lidOpenRotation has to be
+         applied. -->
+    <bool name="config_hasRemovableLid">false</bool>
+
+    <!-- Asus dock compatibility disabled by default -->
+    <bool name="config_hasDockBattery">false</bool>
+
+    <!-- Set to true for Tegra3 devices -->
+    <bool name="config_isTegra3">false</bool>
 </resources>

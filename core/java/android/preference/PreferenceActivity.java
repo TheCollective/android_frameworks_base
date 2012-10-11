@@ -21,6 +21,7 @@ import android.app.FragmentBreadCrumbs;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.ListActivity;
+import android.content.ContentResolver; 
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
@@ -31,6 +32,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -84,6 +86,13 @@ import java.util.List;
  * items.  Doing this implicitly switches the class into its new "headers
  * + fragments" mode rather than the old style of just showing a single
  * preferences list.
+ * 
+ * <div class="special reference">
+ * <h3>Developer Guides</h3>
+ * <p>For information about using {@code PreferenceActivity},
+ * read the <a href="{@docRoot}guide/topics/ui/settings.html">Settings</a>
+ * guide.</p>
+ * </div>
  *
  * <a name="SampleCode"></a>
  * <h3>Sample Code</h3>
@@ -671,10 +680,16 @@ public abstract class PreferenceActivity extends ListActivity implements
      * The default implementation returns true if the screen is large
      * enough.
      */
+    //public boolean onIsMultiPane() {
+        //boolean preferMultiPane = getResources().getBoolean(
+                //com.android.internal.R.bool.preferences_prefer_dual_pane);
+        //return preferMultiPane;
+    //}
     public boolean onIsMultiPane() {
-        boolean preferMultiPane = getResources().getBoolean(
-                com.android.internal.R.bool.preferences_prefer_dual_pane);
-        return preferMultiPane;
+       boolean preferMultiPane = Settings.System.getBoolean(
+                getContentResolver(), Settings.System.FORCE_DUAL_PANEL, getResources().getBoolean(
+                com.android.internal.R.bool.preferences_prefer_dual_pane));
+       return preferMultiPane;
     }
 
     /**

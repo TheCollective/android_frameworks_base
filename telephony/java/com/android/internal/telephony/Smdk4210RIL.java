@@ -63,6 +63,7 @@ import java.io.InputStream;
 import java.lang.Runtime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 
 public class Smdk4210RIL extends RIL implements CommandsInterface {
 
@@ -157,6 +158,7 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
     public Smdk4210RIL(Context context, int networkMode, int cdmaSubscription) {
         super(context, networkMode, cdmaSubscription);
         audioManager = (AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
+        mQANElements = 5;
     }
 
     @Override
@@ -310,6 +312,59 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
     }
 
     @Override
+    protected RILRequest findAndRemoveRequestFromList(int serial) {
+        long removalTime = System.currentTimeMillis();
+        long timeDiff = 0;
+
+        synchronized (mRequestsList) {
+          Iterator<RILRequest> itr = mRequestsList.iterator();
+
+          while ( itr.hasNext() ) {
+            RILRequest rr = itr.next();
+
+            if (rr.mSerial == serial) {
+                itr.remove();
+                if (mRequestMessagesWaiting > 0)
+                    mRequestMessagesWaiting--;
+                return rr;
+            }
+            else
+            {
+              // We need some special code here for the Samsung RIL,
+              // which isn't responding to some requests.
+              // We will print a list of such stale requests which
+              // haven't yet received a response.  If the timeout fires
+              // first, then the wakelock is released without debugging.
+              timeDiff = removalTime - rr.creationTime;
+              if ( timeDiff > mWakeLockTimeout )
+              {
+                Log.d(LOG_TAG,  "No response for [" + rr.mSerial + "] " +
+                        requestToString(rr.mRequest) + " after " + timeDiff + " milliseconds.");
+
+                /* Don't actually remove anything for now.  Consider uncommenting this to
+                   purge stale requests */
+
+                /*
+                itr.remove();
+                if (mRequestMessagesWaiting > 0) {
+                    mRequestMessagesWaiting--;
+                }
+
+                // We don't handle the callback (ie. rr.mResult) for
+                // RIL_REQUEST_SET_TTY_MODE, which is
+                // RIL_REQUEST_QUERY_TTY_MODE.  The reason for not doing
+                // so is because it will also not get a response from the
+                // Samsung RIL
+                rr.release();
+                */
+              }
+            }
+          }
+        }
+        return null;
+    }
+
+    @Override
     protected void processSolicited (Parcel p) {
     int serial, error;
     boolean found = false;
@@ -407,7 +462,7 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_EXPLICIT_CALL_TRANSFER: ret =  responseVoid(p); break;
             case RIL_REQUEST_SET_PREFERRED_NETWORK_TYPE: ret =  responseVoid(p); break;
             case RIL_REQUEST_GET_PREFERRED_NETWORK_TYPE: ret =  responseGetPreferredNetworkType(p); break;
-            case RIL_REQUEST_GET_NEIGHBORING_CELL_IDS: ret = responseVoid(p); break;
+            case RIL_REQUEST_GET_NEIGHBORING_CELL_IDS: ret = responseCellList(p); break;
             case RIL_REQUEST_SET_LOCATION_UPDATES: ret =  responseVoid(p); break;
             case RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE: ret =  responseVoid(p); break;
             case RIL_REQUEST_CDMA_SET_ROAMING_PREFERENCE: ret =  responseVoid(p); break;
@@ -436,8 +491,11 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_EXIT_EMERGENCY_CALLBACK_MODE: ret = responseVoid(p); break;
             case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS: ret = responseVoid(p); break;
             case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING: ret = responseVoid(p); break;
-            case RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE: ret =  responseInts(p); break;
+            case RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE: ret =  responseVoid(p); break;
             case RIL_REQUEST_ISIM_AUTHENTICATION: ret =  responseString(p); break;
+            case RIL_REQUEST_ACKNOWLEDGE_INCOMING_GSM_SMS_WITH_PDU: ret = responseVoid(p); break;
+            case RIL_REQUEST_STK_SEND_ENVELOPE_WITH_STATUS: ret = responseICC_IO(p); break;
+            case RIL_REQUEST_VOICE_RADIO_TECH: ret = responseInts(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                 //break;
@@ -630,7 +688,7 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
     protected Object
     responseCallList(Parcel p) {
         int num;
-        int voiceSettings;
+        boolean isVideo;
         ArrayList<DriverCall> response;
         DriverCall dc;
         int dataAvail = p.dataAvail();
@@ -649,38 +707,35 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
 
         for (int i = 0 ; i < num ; i++) {
 
-            dc = new DriverCall();
+            dc                      = new DriverCall();
+            dc.state                = DriverCall.stateFromCLCC(p.readInt());
+            dc.index                = p.readInt();
+            dc.TOA                  = p.readInt();
+            dc.isMpty               = (0 != p.readInt());
+            dc.isMT                 = (0 != p.readInt());
+            dc.als                  = p.readInt();
+            dc.isVoice              = (0 != p.readInt());
+            isVideo                 = (0 != p.readInt());
+            dc.isVoicePrivacy       = (0 != p.readInt());
+            dc.number               = p.readString();
+            int np                  = p.readInt();
+            dc.numberPresentation   = DriverCall.presentationFromCLIP(np);
+            dc.name                 = p.readString();
+            dc.namePresentation     = p.readInt();
+            int uusInfoPresent      = p.readInt();
 
-            dc.state = DriverCall.stateFromCLCC(p.readInt());
             Log.d(LOG_TAG, "state = " + dc.state);
-            dc.index = p.readInt();
             Log.d(LOG_TAG, "index = " + dc.index);
-            dc.TOA = p.readInt();
             Log.d(LOG_TAG, "state = " + dc.TOA);
-            dc.isMpty = (0 != p.readInt());
             Log.d(LOG_TAG, "isMpty = " + dc.isMpty);
-            dc.isMT = (0 != p.readInt());
             Log.d(LOG_TAG, "isMT = " + dc.isMT);
-            dc.als = p.readInt();
             Log.d(LOG_TAG, "als = " + dc.als);
-            voiceSettings = p.readInt();
-            dc.isVoice = (0 == voiceSettings) ? false : true;
             Log.d(LOG_TAG, "isVoice = " + dc.isVoice);
-            dc.isVoicePrivacy =  (0 != p.readInt());
-            //Some Samsung magic data for Videocalls
-            voiceSettings = p.readInt();
-            //printing it to cosole for later investigation
-            Log.d(LOG_TAG, "Samsung magic = " + voiceSettings);
-            dc.number = p.readString();
+            Log.d(LOG_TAG, "isVideo = " + isVideo);
             Log.d(LOG_TAG, "number = " + dc.number);
-            int np = p.readInt();
             Log.d(LOG_TAG, "np = " + np);
-            dc.numberPresentation = DriverCall.presentationFromCLIP(np);
-            dc.name = p.readString();
             Log.d(LOG_TAG, "name = " + dc.name);
-            dc.namePresentation = p.readInt();
             Log.d(LOG_TAG, "namePresentation = " + dc.namePresentation);
-            int uusInfoPresent = p.readInt();
             Log.d(LOG_TAG, "uusInfoPresent = " + uusInfoPresent);
 
             if (uusInfoPresent == 1) {
@@ -742,32 +797,6 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
 
     @Override
     protected Object
-    responseOperatorInfos(Parcel p) {
-        String strings[] = (String [])responseStrings(p);
-        ArrayList<OperatorInfo> ret;
-
-        if (strings.length % 5 != 0) {
-            throw new RuntimeException(
-                "RIL_REQUEST_QUERY_AVAILABLE_NETWORKS: invalid response. Got "
-                + strings.length + " strings, expected multible of 5");
-        }
-
-        ret = new ArrayList<OperatorInfo>(strings.length / 5);
-
-        for (int i = 0 ; i < strings.length ; i += 5) {
-            ret.add (
-                new OperatorInfo(
-                    strings[i+0],
-                    strings[i+1],
-                    strings[i+2],
-                    strings[i+3]));
-        }
-
-        return ret;
-    }
-
-    @Override
-    protected Object
     responseSignalStrength(Parcel p) {
         int numInts = 12;
         int response[];
@@ -807,5 +836,28 @@ public class Smdk4210RIL extends RIL implements CommandsInterface {
         Log.d(LOG_TAG, "responseSignalStength AFTER: gsmDbm=" + response[0]);
 
         return response;
+    }
+
+    @Override public void
+    getVoiceRadioTechnology(Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_VOICE_RADIO_TECH, result);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+        // RIL versions below 7 do not support this request
+        if (mRilVersion >= 7)
+            send(rr);
+        else
+            Log.d(LOG_TAG, "RIL_REQUEST_VOICE_RADIO_TECH blocked!!!");
+    }
+
+    @Override
+    public void getCdmaSubscriptionSource(Message response) {
+        RILRequest rr = RILRequest.obtain(
+                RILConstants.RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+        Log.d(LOG_TAG, "RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE blocked!!!");
+        //send(rr);
     }
 }

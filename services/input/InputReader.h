@@ -75,6 +75,9 @@ struct InputReaderConfiguration {
         // The device name alias supplied by the may have changed for some devices.
         CHANGE_DEVICE_ALIAS = 1 << 5,
 
+        // Stylus icon option changed.
+        CHANGE_STYLUS_ICON_ENABLED = 1 << 6,
+
         // All devices must be reopened.
         CHANGE_MUST_REOPEN = 1 << 31,
     };
@@ -162,6 +165,12 @@ struct InputReaderConfiguration {
     // True to show the location of touches on the touch screen as spots.
     bool showTouches;
 
+    // True to show the pointer icon when a stylus is used.
+    bool stylusIconEnabled;
+
+    // Ignore finger touches this long after the stylus has been used (including hover)
+    nsecs_t stylusPalmRejectionTime;
+
     InputReaderConfiguration() :
             virtualKeyQuietTime(0),
             pointerVelocityControlParameters(1.0f, 500.0f, 3000.0f, 3.0f),
@@ -178,7 +187,10 @@ struct InputReaderConfiguration {
             pointerGestureSwipeMaxWidthRatio(0.25f),
             pointerGestureMovementSpeedRatio(0.8f),
             pointerGestureZoomSpeedRatio(0.3f),
-            showTouches(false) { }
+            showTouches(false),
+            stylusIconEnabled(false),
+            stylusPalmRejectionTime(50 * 10000000LL) // 50 ms
+    { }
 
     bool getDisplayInfo(int32_t displayId, bool external,
             int32_t* width, int32_t* height, int32_t* orientation) const;
@@ -288,6 +300,10 @@ public:
     virtual void vibrate(int32_t deviceId, const nsecs_t* pattern, size_t patternSize,
             ssize_t repeat, int32_t token) = 0;
     virtual void cancelVibrate(int32_t deviceId, int32_t token) = 0;
+
+    /* Sets a specific input device's keyLayout to be overridden by filename.
+     */
+    virtual void setKeyLayout(const char* deviceName, const char* keyLayout) = 0;
 };
 
 
@@ -357,6 +373,8 @@ public:
     virtual void vibrate(int32_t deviceId, const nsecs_t* pattern, size_t patternSize,
             ssize_t repeat, int32_t token);
     virtual void cancelVibrate(int32_t deviceId, int32_t token);
+
+    virtual void setKeyLayout(const char* deviceName, const char* keyLayout);
 
 protected:
     // These members are protected so they can be instrumented by test cases.
@@ -1549,6 +1567,9 @@ private:
     VelocityControl mWheelXVelocityControl;
     VelocityControl mWheelYVelocityControl;
 
+    // The time the stylus event was processed by any TouchInputMapper
+    static nsecs_t mLastStylusTime;
+
     void sync(nsecs_t when);
 
     bool consumeRawTouches(nsecs_t when, uint32_t policyFlags);
@@ -1601,6 +1622,10 @@ private:
     const VirtualKey* findVirtualKeyHit(int32_t x, int32_t y);
 
     void assignPointerIds();
+
+    void unfadePointer(PointerControllerInterface::Transition transition);
+
+    bool rejectPalm(nsecs_t when);
 };
 
 

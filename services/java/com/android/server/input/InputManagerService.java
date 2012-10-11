@@ -172,6 +172,7 @@ public class InputManagerService extends IInputManager.Stub implements Watchdog.
             InputChannel fromChannel, InputChannel toChannel);
     private static native void nativeSetPointerSpeed(int ptr, int speed);
     private static native void nativeSetShowTouches(int ptr, boolean enabled);
+    private static native void nativeSetStylusIconEnabled(int ptr, boolean enabled);
     private static native void nativeVibrate(int ptr, int deviceId, long[] pattern,
             int repeat, int token);
     private static native void nativeCancelVibrate(int ptr, int deviceId, int token);
@@ -179,6 +180,7 @@ public class InputManagerService extends IInputManager.Stub implements Watchdog.
     private static native void nativeReloadDeviceAliases(int ptr);
     private static native String nativeDump(int ptr);
     private static native void nativeMonitor(int ptr);
+    private static native void nativeSetKeyLayout(int ptr, String deviceName, String keyLayout);
 
     // Input event injection constants defined in InputDispatcher.h.
     private static final int INPUT_EVENT_INJECTION_SUCCEEDED = 0;
@@ -231,9 +233,13 @@ public class InputManagerService extends IInputManager.Stub implements Watchdog.
 
         registerPointerSpeedSettingObserver();
         registerShowTouchesSettingObserver();
+        registerStylusIconEnabledSettingObserver();
 
         updatePointerSpeedFromSettings();
         updateShowTouchesFromSettings();
+        updateStylusIconEnabledFromSettings();
+
+        registerKeyLayoutSettingObserver();
     }
 
     public void systemReady(BluetoothService bluetoothService) {
@@ -1066,6 +1072,32 @@ public class InputManagerService extends IInputManager.Stub implements Watchdog.
         return speed;
     }
 
+    public void updateStylusIconEnabledFromSettings() {
+        int enabled = getStylusIconEnabled(0);
+        nativeSetStylusIconEnabled(mPtr, enabled != 0);
+    }
+
+    public void registerStylusIconEnabledSettingObserver() {
+        mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.STYLUS_ICON_ENABLED), false,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        updateStylusIconEnabledFromSettings();
+                    }
+                });
+    }
+
+    private int getStylusIconEnabled(int defaultValue) {
+        int result = defaultValue;
+        try {
+            result = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STYLUS_ICON_ENABLED);
+        } catch (SettingNotFoundException snfe) {
+        }
+        return result;
+    }
+
     public void updateShowTouchesFromSettings() {
         int setting = getShowTouchesSetting(0);
         nativeSetShowTouches(mPtr, setting != 0);
@@ -1189,6 +1221,42 @@ public class InputManagerService extends IInputManager.Stub implements Watchdog.
     public void monitor() {
         synchronized (mInputFilterLock) { }
         nativeMonitor(mPtr);
+    }
+
+    private void setKeyLayout(String deviceName, String keyLayout) {
+        nativeSetKeyLayout(mPtr, deviceName, keyLayout);
+    }
+
+    private void updateKeyLayoutFromSettings() {
+        String setting = getKeyLayoutSetting();
+        if (setting == null || setting.length() == 0) {
+            return;
+        }
+        String[] opts = setting.split(",", 2);
+        if (opts.length != 2) {
+            Slog.e(TAG, "Invalid layout setting " + setting);
+            return;
+        }
+        Slog.d(TAG, "changing layout " + opts[0] + " to keymap " + opts[1] + ", setting: " + setting);
+
+        setKeyLayout(opts[0], opts[1]);
+    }
+
+    private void registerKeyLayoutSettingObserver() {
+        mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.KEYLAYOUT_OVERRIDES), true,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        updateKeyLayoutFromSettings();
+                    }
+                });
+    }
+
+    private String getKeyLayoutSetting() {
+        String setting = Settings.System.getString(mContext.getContentResolver(),
+                Settings.System.KEYLAYOUT_OVERRIDES);
+        return setting;
     }
 
     // Native callback.

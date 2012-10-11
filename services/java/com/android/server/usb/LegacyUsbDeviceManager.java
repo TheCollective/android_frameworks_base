@@ -176,6 +176,7 @@ public class LegacyUsbDeviceManager extends UsbDeviceManager {
         StorageManager storageManager = (StorageManager)
                 mContext.getSystemService(Context.STORAGE_SERVICE);
         StorageVolume[] volumes = storageManager.getVolumeList();
+
         if (volumes.length > 0) {
             if (Settings.Secure.getInt(mContentResolver, Settings.Secure.USB_MASS_STORAGE_ENABLED, 0) == 1 ) {
                 massStorageSupported = volumes[0].allowMassStorage();
@@ -183,6 +184,7 @@ public class LegacyUsbDeviceManager extends UsbDeviceManager {
                 massStorageSupported = false;
             }
         }
+
         mUseUsbNotification = !massStorageSupported;
 
         // make sure the ADB_ENABLED setting value matches the current state
@@ -317,13 +319,12 @@ public class LegacyUsbDeviceManager extends UsbDeviceManager {
                     false, new AdbSettingsObserver());
 
                 mContentResolver.registerContentObserver(
-	            Settings.Secure.getUriFor(Settings.Secure.ADB_NOTIFY),
+                    Settings.Secure.getUriFor(Settings.Secure.ADB_NOTIFY),
                     false, new ContentObserver(null) {
                         public void onChange(boolean selfChange) {
-	                    updateAdbNotification();
+                            updateAdbNotification();
                         }
-	            });
-
+                    });
 
                 // Watch for USB configuration changes
                 if (mLegacy) {
@@ -605,8 +606,8 @@ public class LegacyUsbDeviceManager extends UsbDeviceManager {
             final int id = com.android.internal.R.string.adb_active_notification_title;
             if (mAdbEnabled && mConnected) {
                 if ("0".equals(SystemProperties.get("persist.adb.notify"))
-	         || Settings.Secure.getInt(mContext.getContentResolver(),
-	            Settings.Secure.ADB_NOTIFY, 1) == 0)
+                 || Settings.Secure.getInt(mContext.getContentResolver(),
+                    Settings.Secure.ADB_NOTIFY, 1) == 0)
                     return;
 
                 if (!mAdbNotificationShown) {
