@@ -214,19 +214,19 @@ public class TransportControlView extends FrameLayout implements OnClickListener
             mLayout = (View) findViewById(R.id.layout_stock);
             mLayout.setVisibility(View.GONE);
 
-            mTrackTitle = (TextView) findViewById(R.id.title_aokp);
+            mTrackTitle = (TextView) findViewById(R.id.title_aocp);
             mTrackTitle.setSelected(true); // enable marquee
-            mTrackAlbum = (TextView) findViewById(R.id.album_aokp);
+            mTrackAlbum = (TextView) findViewById(R.id.album_aocp);
             mTrackAlbum.setSelected(true); // enable marquee
-            mTrackArtist = (TextView) findViewById(R.id.artist_aokp);
+            mTrackArtist = (TextView) findViewById(R.id.artist_aocp);
             mTrackArtist.setSelected(true); // enable marquee
-            mAlbumArt = (ImageView) findViewById(R.id.albumart_aokp);
-            mBtnPrev = (ImageView) findViewById(R.id.btn_prev_aokp);
-            mBtnPlay = (ImageView) findViewById(R.id.btn_play_aokp);
-            mBtnNext = (ImageView) findViewById(R.id.btn_next_aokp);
+            mAlbumArt = (ImageView) findViewById(R.id.albumart_aocp);
+            mBtnPrev = (ImageView) findViewById(R.id.btn_prev_aocp);
+            mBtnPlay = (ImageView) findViewById(R.id.btn_play_aocp);
+            mBtnNext = (ImageView) findViewById(R.id.btn_next_aocp);
         }
         else {
-            mLayout = (View) findViewById(R.id.layout_aokp);
+            mLayout = (View) findViewById(R.id.layout_aocp);
             mLayout.setVisibility(View.GONE);
 
             mTrackTitle = (TextView) findViewById(R.id.title_stock);

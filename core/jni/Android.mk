@@ -227,6 +227,10 @@ LOCAL_SHARED_LIBRARIES := \
 	libharfbuzz \
 	libz
 
+ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+	LOCAL_SHARED_LIBRARIES += libtilerenderer
+endif
+
 ifeq ($(USE_OPENGL_RENDERER),true)
 	LOCAL_SHARED_LIBRARIES += libhwui
 endif
