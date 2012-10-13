@@ -1503,35 +1503,6 @@ public class NotificationManagerService extends INotificationManager.Stub
         return mCustomLedColors.get(notiPackage);
     }
 
-    private void parseCustomLedValues(String customLedValuesString) {
-        if (TextUtils.isEmpty(customLedValuesString)) {
-            return;
-        }
-
-        for (String packageValuesString : customLedValuesString.split("\\|")) {
-            String[] ledValues = packageValuesString.split(";");
-            if (ledValues.length != 2) {
-                Log.e(TAG, "Error parsing custom led values for unknown package");
-                continue;
-            }
-            String packageName = ledValues[0];
-            String ledColor = ledValues[1];
-
-            mCustomLedColors.put(packageName, ledColor);
-        }
-    }
-
-    private String getLedColor(NotificationRecord ledNotification) {
-        String notiPackage = null;
-        String google = "com.google.android.gsf";
-        if ((ledNotification.pkg).equals(google)) {
-            notiPackage = "com.google.android.talk";
-        } else {
-            notiPackage = ledNotification.pkg;
-        }
-        return mCustomLedColors.get(notiPackage);
-    }
-
     // lock on mNotificationList
     private int indexOfNotificationLocked(String pkg, String tag, int id)
     {

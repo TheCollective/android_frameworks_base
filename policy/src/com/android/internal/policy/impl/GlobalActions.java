@@ -123,10 +123,9 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
     private boolean mIsWaitingForEcmExit = false;
     private boolean mHasTelephony;
     private boolean mHasVibrator;
-    private boolean mEnableNavBarHideToggle = true;
+
     private boolean mEnableScreenshotToggle = false;
     private boolean mEnableAirplaneToggle = true;
-
 
     private IWindowManager mIWindowManager;
 
@@ -212,10 +211,6 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
 
         mEnableScreenshotToggle = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.POWER_DIALOG_SHOW_SCREENSHOT, 0) == 1;
-
-        mEnableNavBarHideToggle= Settings.System.getBoolean(mContext.getContentResolver(),
-                Settings.System.POWER_DIALOG_SHOW_NAVBAR_HIDE, false);
-        mNavBarHideToggle = new NavBarAction(mHandler);
 
         mEnableAirplaneToggle = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.POWER_DIALOG_SHOW_AIRPLANE_TOGGLE, 1) == 1;

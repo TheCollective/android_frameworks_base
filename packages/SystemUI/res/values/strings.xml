@@ -402,13 +402,12 @@
     <string name="toggle_silent">Silent</string>
     <string name="toggle_torch">Torch</string>
     <string name="toggle_sync">Sync</string>
-    <string name="toggle_swagger">Swagger</string>
+    <string name="toggle_pimped">Pimped</string>
     <string name="toggle_fcharge">FastChrg</string>
     <string name="toggle_tether">Tether</string>
     <string name="toggle_nfc">NFC</string>
+    <string name="toggle_screentimeout">Screentimeout</string>
     <string name="status_bar_settings_toggles">Toggles</string>
-    
-    <string name="toggle_navbar">Toggle NavBar</string>
 
     <!-- Label in drop down to identify brightness slider -->
     <string name="brightness_label">Brightness</string>
@@ -422,7 +421,6 @@
     <string name="bt">BT</string>
     <string name="gps">GPS</string>
     <string name="rotate">ROTATE</string>
-    <string name="swagger">SWAGGER</string>
     <string name="sync">SYNC</string>
     <string name="silent">SILENT</string>
 

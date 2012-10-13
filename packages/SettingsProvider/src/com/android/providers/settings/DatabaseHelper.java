@@ -1475,6 +1475,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadIntegerSetting(stmt, Settings.System.SCREEN_BRIGHTNESS,
                     R.integer.def_screen_brightness);
+					
+			loadIntegerSetting(stmt, Settings.System.STATUSBAR_WEATHER_STYLE,
+                    R.integer.def_weather_style);		
 
             loadBooleanSetting(stmt, Settings.System.SCREEN_BRIGHTNESS_MODE,
                     R.bool.def_screen_brightness_automatic_mode);
