@@ -16,11 +16,11 @@ import android.app.Activity;
 
 public class ScreentimeoutToggle extends Toggle {
 
-    private int sc;
-    int ScreenTimeout = 0;
-    private boolean tripped = false;
-	private int timeout;
-	private int value;
+        private int sc;
+        int ScreenTimeout = 0;
+        private boolean tripped = false;
+	    private int timeout;
+	    private int value;
 	
      public ScreentimeoutToggle(Context context) {
         super(context);
@@ -46,8 +46,8 @@ public class ScreentimeoutToggle extends Toggle {
      protected boolean updateInternalToggleState() {
         
 	if (tripped == true) { 	 
-	int ScreenTimeout = getScreenTimeout();
-         switch (ScreenTimeout) {
+	    int ScreenTimeout = getScreenTimeout();
+        switch (ScreenTimeout) {
                  case -1: 
 				 setIcon(R.drawable.toggle_30s);
 				 value = 30000; 
@@ -66,7 +66,13 @@ public class ScreentimeoutToggle extends Toggle {
 				
                     break;
 					
-				 case 120000: 
+				case 120000: 
+				 setIcon(R.drawable.toggle_5m);
+				 value = 300000;
+				
+                    break;	
+					
+				 case 300000: 
 				 setIcon(R.drawable.toggle_10m);
 				 value = 600000;
 				
@@ -78,8 +84,8 @@ public class ScreentimeoutToggle extends Toggle {
                     break;		
                  
 				 default: 
-				 setIcon(R.drawable.toggle_on);
-				 value = -1;
+				 setIcon(R.drawable.toggle_1m);
+			     value = 60000;
 				 }
 				 	int sc = value;
                  setScreenTimeout(sc);
@@ -124,6 +130,9 @@ public class ScreentimeoutToggle extends Toggle {
 				 case 120000: 
 				 setIcon(R.drawable.toggle_2m);
 		//		 value = 120000;
+		
+	             case 300000: 
+				 setIcon(R.drawable.toggle_5m);
 				 
 				
                     break;
@@ -143,9 +152,6 @@ public class ScreentimeoutToggle extends Toggle {
   
   @Override
   protected void onCheckChanged(boolean isChecked) {
-      
-
-   //     mToggle.setChecked(true);
         updateState();
     }
 	
