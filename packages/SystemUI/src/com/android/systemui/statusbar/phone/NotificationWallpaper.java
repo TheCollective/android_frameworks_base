@@ -18,7 +18,7 @@ class NotificationWallpaper extends FrameLayout {
 
     private final String TAG = "NotificationWallpaperUpdater";
 
-    private final String NOTIF_WALLPAPER_IMAGE_PATH = "/data/data/com.collective.personlize/files/notification_wallpaper.jpg";
+    private final String NOTIF_WALLPAPER_IMAGE_PATH = "/data/data/com.collective.personalize/files/notification_wallpaper.jpg";
 
     private ImageView mNotificationWallpaperImage;
 
