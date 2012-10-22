@@ -63,7 +63,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // database gets upgraded properly. At a minimum, please confirm that 'upgradeVersion'
     // is properly propagated through your change.  Not doing so will result in a loss of user
     // settings.
-    private static final int DATABASE_VERSION = 79;
+    private static final int DATABASE_VERSION = 80;
 
     private Context mContext;
 
@@ -1071,6 +1071,52 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             upgradeVersion = 79;
         }
 
+        if (upgradeVersion == 79) {
+            // Before touch exploration was a global setting controlled by the user
+            // via the UI. However, if the enabled accessibility services do not
+            // handle touch exploration mode, enabling it makes no sense. Therefore,
+            // now the services request touch exploration mode and the user is
+            // presented with a dialog to allow that and if she does we store that
+            // in the database. As a result of this change a user that has enabled
+            // accessibility, touch exploration, and some accessibility services
+            // may lose touch exploration state, thus rendering the device useless
+            // unless sighted help is provided, since the enabled service(s) are
+            // not in the list of services to which the user granted a permission
+            // to put the device in touch explore mode. Here we are allowing all
+            // enabled accessibility services to toggle touch exploration provided
+            // accessibility and touch exploration are enabled and no services can
+            // toggle touch exploration. Note that the user has already manually
+            // enabled the services and touch exploration which means the she has
+            // given consent to have these services work in touch exploration mode.
+            final boolean accessibilityEnabled = getIntValueFromTable(db, "secure",
+                    Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1;
+            final boolean touchExplorationEnabled = getIntValueFromTable(db, "secure",
+                    Settings.Secure.TOUCH_EXPLORATION_ENABLED, 0) == 1;
+            if (accessibilityEnabled && touchExplorationEnabled) {
+                String enabledServices = getStringValueFromTable(db, "secure",
+                        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, "");
+                String touchExplorationGrantedServices = getStringValueFromTable(db, "secure",
+                        Settings.Secure.TOUCH_EXPLORATION_GRANTED_ACCESSIBILITY_SERVICES, "");
+                if (TextUtils.isEmpty(touchExplorationGrantedServices)
+                        && !TextUtils.isEmpty(enabledServices)) {
+                    SQLiteStatement stmt = null;
+                    try {
+                        db.beginTransaction();
+                        stmt = db.compileStatement("INSERT OR REPLACE INTO secure(name,value)"
+                                + " VALUES(?,?);");
+                        loadSetting(stmt,
+                                Settings.Secure.TOUCH_EXPLORATION_GRANTED_ACCESSIBILITY_SERVICES,
+                                enabledServices);
+                        db.setTransactionSuccessful();
+                    } finally {
+                        db.endTransaction();
+                        if (stmt != null) stmt.close();
+                    }
+                }
+            }
+            upgradeVersion = 80;
+        }
+
         // *** Remember to update DATABASE_VERSION above!
 
         if (upgradeVersion != currentVersion) {
@@ -1476,6 +1522,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             loadIntegerSetting(stmt, Settings.System.SCREEN_BRIGHTNESS,
                     R.integer.def_screen_brightness);
 					
+			loadIntegerSetting(stmt, Settings.System.STATUSBAR_TOGGLES_BRIGHTNESS_LOC,
+                    R.integer.def_brightness_loc);
+					
+			loadIntegerSetting(stmt, Settings.System.VOLUME_NOTIFICATION,
+                    R.integer.def_notification_volume);	
+					
+			loadIntegerSetting(stmt, Settings.System.VOLUME_RING,
+                    R.integer.def_ring_volume);			
+						
+			loadIntegerSetting(stmt, Settings.System.VOLUME_RING_SPEAKER,
+                    R.integer.def_ring_volume_spk);
+								
 			loadIntegerSetting(stmt, Settings.System.STATUSBAR_WEATHER_STYLE,
                     R.integer.def_weather_style);		
 

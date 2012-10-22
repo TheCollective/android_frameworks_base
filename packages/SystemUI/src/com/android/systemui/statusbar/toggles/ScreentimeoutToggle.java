@@ -17,7 +17,6 @@ import android.app.Activity;
 public class ScreentimeoutToggle extends Toggle {
 
         private int sc;
-        int ScreenTimeout = 0;
         private boolean tripped = false;
 	    private int timeout;
 	    private int value;
@@ -47,54 +46,38 @@ public class ScreentimeoutToggle extends Toggle {
         
 	if (tripped == true) { 	 
 	    int ScreenTimeout = getScreenTimeout();
-        switch (ScreenTimeout) {
-                 case -1: 
-				 setIcon(R.drawable.toggle_30s);
+		if (ScreenTimeout == -1) {
+            setIcon(R.drawable.toggle_30s);
 				 value = 30000; 
-                     
-                    break;
-					
-                 case 30000: 
-			     setIcon(R.drawable.toggle_1m);
+        } else if (ScreenTimeout == 30000) {
+            setIcon(R.drawable.toggle_1m);
 			     value = 60000;
-				
-                    break;
-					
-                 case 60000: 
-				 setIcon(R.drawable.toggle_2m);
+        } else if (ScreenTimeout == 60000) {
+            setIcon(R.drawable.toggle_2m);
 				 value = 120000;
-				
-                    break;
-					
-				case 120000: 
-				 setIcon(R.drawable.toggle_5m);
+        } else if (ScreenTimeout == 120000) {
+           setIcon(R.drawable.toggle_5m);
 				 value = 300000;
-				
-                    break;	
-					
-				 case 300000: 
-				 setIcon(R.drawable.toggle_10m);
+		} else if (ScreenTimeout == 300000) {
+            setIcon(R.drawable.toggle_10m);
 				 value = 600000;
-				
-                    break;
-				 case 600000: 
-				 setIcon(R.drawable.toggle_on);
+        } else if (ScreenTimeout == 600000) {
+            setIcon(R.drawable.toggle_on);
 				 value = -1;
-				
-                    break;		
-                 
-				 default: 
-				 setIcon(R.drawable.toggle_1m);
+        } else {
+            setIcon(R.drawable.toggle_1m);
 			     value = 60000;
-				 }
-				 	int sc = value;
-                 setScreenTimeout(sc);
+        }
+		
+        
+//				 	int sc = value;
+                 setScreenTimeout(value);
 				 
        } else {
 	        	tripped = true;
 	}
     
-//	mToggle.setChecked(true);
+
   
     return tripped;
 			
@@ -103,51 +86,28 @@ public class ScreentimeoutToggle extends Toggle {
   
   
   private void loadToggles() {
-  tripped = false;
-  int timeoutToggle = getScreenTimeout();
-  switch (timeoutToggle) {
-                 case -1: 
-				 setIcon(R.drawable.toggle_on);
-	//			 value = -1;
-				 
-                     
-                    break;
-					
-                 case 30000: 
-				 setIcon(R.drawable.toggle_30s);
-	//			 value = 30000; 
-			     
-				
-                    break;
-					
-                 case 60000: 
-				 setIcon(R.drawable.toggle_1m);
-	//		     value = 60000;
-				 
-				
-                    break;
-					
-				 case 120000: 
-				 setIcon(R.drawable.toggle_2m);
-		//		 value = 120000;
+        int timeoutToggle = getScreenTimeout();
+		mToggle.setChecked(true);
+		if (timeoutToggle == -1) {
+            setIcon(R.drawable.toggle_on);
+        } else if (timeoutToggle == 30000) {
+            setIcon(R.drawable.toggle_30s);
+        } else if (timeoutToggle == 60000) {
+            setIcon(R.drawable.toggle_1m);
+        } else if (timeoutToggle == 120000) {
+            setIcon(R.drawable.toggle_2m);
+		} else if (timeoutToggle == 300000) {
+            setIcon(R.drawable.toggle_5m);
+        } else if (timeoutToggle == 600000) {
+            setIcon(R.drawable.toggle_10m);
+        } else {
+            setIcon(R.drawable.toggle_settings);
+        }
 		
-	             case 300000: 
-				 setIcon(R.drawable.toggle_5m);
-				 
-				
-                    break;
-					
-				 case 600000: 
-				 setIcon(R.drawable.toggle_10m);
-		//		 value = 600000;
-				
-                    break;		
-                 
-				 default: 
-				 setIcon(R.drawable.toggle_settings);
-			//	 value = timeoutToggle;
-            }
-  mToggle.setChecked(true);
+
+  tripped = false;
+  
+		
   }
   
   @Override

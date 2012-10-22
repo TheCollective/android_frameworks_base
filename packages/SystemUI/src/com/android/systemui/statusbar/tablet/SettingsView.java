@@ -29,8 +29,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.android.systemui.R;
-import com.android.systemui.statusbar.policy.AirplaneModeController;
-import com.android.systemui.statusbar.policy.AutoRotateController;
 import com.android.systemui.statusbar.policy.BrightnessController;
 import com.android.systemui.statusbar.policy.DoNotDisturbController;
 import com.android.systemui.statusbar.policy.ToggleSlider;
