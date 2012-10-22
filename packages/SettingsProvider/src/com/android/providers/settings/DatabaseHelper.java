@@ -1531,9 +1531,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 			loadIntegerSetting(stmt, Settings.System.VOLUME_RING,
                     R.integer.def_ring_volume);			
 						
-			loadIntegerSetting(stmt, Settings.System.VOLUME_RING_SPEAKER,
-                    R.integer.def_ring_volume_spk);
-								
 			loadIntegerSetting(stmt, Settings.System.STATUSBAR_WEATHER_STYLE,
                     R.integer.def_weather_style);		
 
@@ -1766,18 +1763,28 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     private int getIntValueFromSystem(SQLiteDatabase db, String name, int defaultValue) {
-        int value = defaultValue;
+        return getIntValueFromTable(db, "system", name, defaultValue);
+    }
+
+    private int getIntValueFromTable(SQLiteDatabase db, String table, String name,
+            int defaultValue) {
+        String value = getStringValueFromTable(db, table, name, null);
+        return (value != null) ? Integer.parseInt(value) : defaultValue;
+    }
+
+    private String getStringValueFromTable(SQLiteDatabase db, String table, String name,
+            String defaultValue) {
         Cursor c = null;
         try {
-            c = db.query("system", new String[] { Settings.System.VALUE }, "name='" + name + "'",
+            c = db.query(table, new String[] { Settings.System.VALUE }, "name='" + name + "'",
                     null, null, null, null);
             if (c != null && c.moveToFirst()) {
                 String val = c.getString(0);
-                value = val == null ? defaultValue : Integer.parseInt(val);
+                return val == null ? defaultValue : val;
             }
         } finally {
             if (c != null) c.close();
         }
-        return value;
+        return defaultValue;
     }
 }

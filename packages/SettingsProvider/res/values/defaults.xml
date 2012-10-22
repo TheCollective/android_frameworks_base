@@ -22,7 +22,6 @@
     <integer name="def_brightness_loc">1</integer>
     <integer name="def_notification_volume">10</integer>
     <integer name="def_ring_volume">10</integer>
-    <integer name="def_ring_volume_spk">7</integer>
     <bool name="def_airplane_mode_on">false</bool>
     <!-- Comma-separated list of bluetooth, wifi, and cell. -->
     <string name="def_airplane_mode_radios" translatable="false">cell,bluetooth,wifi,nfc,wimax</string>
