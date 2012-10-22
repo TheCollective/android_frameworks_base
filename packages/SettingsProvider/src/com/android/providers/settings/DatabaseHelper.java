@@ -1521,15 +1521,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadIntegerSetting(stmt, Settings.System.SCREEN_BRIGHTNESS,
                     R.integer.def_screen_brightness);
-					
+			
 			loadIntegerSetting(stmt, Settings.System.STATUSBAR_TOGGLES_BRIGHTNESS_LOC,
                     R.integer.def_brightness_loc);
+								
+			loadIntegerSetting(stmt, Settings.System.VOLUME_RING_SPEAKER,
+                    R.integer.def_volume_ring_spk);
 					
-			loadIntegerSetting(stmt, Settings.System.VOLUME_NOTIFICATION,
-                    R.integer.def_notification_volume);	
-					
-			loadIntegerSetting(stmt, Settings.System.VOLUME_RING,
-                    R.integer.def_ring_volume);			
+			loadIntegerSetting(stmt, Settings.System.VOLUME_RING_LAST_AUDIBLE_SPEAKER,
+                    R.integer.def_volume_ring_last_aud_spk);		
 						
 			loadIntegerSetting(stmt, Settings.System.STATUSBAR_WEATHER_STYLE,
                     R.integer.def_weather_style);		

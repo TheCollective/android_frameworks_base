@@ -1676,6 +1676,10 @@ public final class Settings {
          * change the volume. See AudioManager.
          */
         public static final String VOLUME_RING = "volume_ring";
+		
+		public static final String VOLUME_RING_SPEAKER = "volume_ring_speaker";
+		
+		public static final String VOLUME_RING_LAST_AUDIBLE_SPEAKER = "volume_ring_last_audible_speaker";
 
         /**
          * System/notifications volume. This is used internally, changing this
