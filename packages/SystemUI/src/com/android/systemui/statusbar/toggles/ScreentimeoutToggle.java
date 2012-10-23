@@ -23,8 +23,6 @@ public class ScreentimeoutToggle extends Toggle {
 	
      public ScreentimeoutToggle(Context context) {
         super(context);
-		
-		
         setLabel(R.string.toggle_screentimeout);
 	    tripped = false;
         loadToggles();
@@ -74,12 +72,12 @@ public class ScreentimeoutToggle extends Toggle {
                  setScreenTimeout(value);
 				 
        } else {
-	        	tripped = true;
+	        	 tripped = true;
 	}
     
 
   
-    return tripped;
+        return tripped;
 			
    }
 	
