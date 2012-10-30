@@ -455,7 +455,7 @@ public class VibratorService extends IVibratorService.Stub
                     if (mDone) {
                         break;
                     }
-                    duration = bedtime - SystemClock.uptimeMillis() - bedtime;
+                    duration = bedtime - SystemClock.uptimeMillis();
                 } while (duration > 0);
             }
         }

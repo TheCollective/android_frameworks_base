@@ -146,6 +146,8 @@ public class FullBackup {
         // Now twiddle the state to match the backup, assuming all went well
         if (mode >= 0 && outFile != null) {
             try {
+                // explicitly prevent emplacement of files accessible by outside apps
+                mode &= 0700;
                 Libcore.os.chmod(outFile.getPath(), (int)mode);
             } catch (ErrnoException e) {
                 e.rethrowAsIOException();
