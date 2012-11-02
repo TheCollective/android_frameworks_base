@@ -220,6 +220,7 @@ class KeyguardStatusViewManager implements OnClickListener {
         mEmergencyCallButtonEnabledInScreen = emergencyButtonEnabledInScreen;
         mDigitalClock = (DigitalClock) findViewById(R.id.time);
         mWeatherPanelView = (WeatherPanel) findViewById(R.id.weatherpanel);
+        mWeatherPanelView.setOnClickListener(mWeatherListener);
         mWeatherTextView = (WeatherText) findViewById(R.id.weather);
         mCalendarView = (ViewFlipper) findViewById(R.id.calendar);
 
@@ -432,7 +433,7 @@ class KeyguardStatusViewManager implements OnClickListener {
     private void updateWeatherInfo() {
         final ContentResolver res = getContext().getContentResolver();
         final boolean weatherInfoEnabled = (Settings.System.getBoolean(res,
-                Settings.System.LOCKSCREEN_WEATHER, true)
+                Settings.System.LOCKSCREEN_WEATHER, false)
                 && (Settings.System.getBoolean(res, Settings.System.USE_WEATHER, false))
                 && mShowingStatus);
 
@@ -888,6 +889,16 @@ class KeyguardStatusViewManager implements OnClickListener {
             mCallback.takeEmergencyCallAction();
         }
     }
+
+    private View.OnClickListener mWeatherListener = new View.OnClickListener() {
+        public void onClick(View v) {
+             Intent weatherintent = new Intent("com.collective.personalize.INTENT_WEATHER_REQUEST");
+             weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_TYPE", "updateweather");
+             weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_ISMANUAL", true);
+             v.getContext().sendBroadcast(weatherintent);
+
+        }
+    };
 
     /**
      * Performs concentenation of PLMN/SPN

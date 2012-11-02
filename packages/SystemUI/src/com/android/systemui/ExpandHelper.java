@@ -85,6 +85,8 @@ public class ExpandHelper implements Gefingerpoken, OnClickListener {
 
     private int mGravity;
 
+    private View mScrollView;
+
     private class ViewScaler {
         View mView;
 
@@ -245,6 +247,9 @@ public class ExpandHelper implements Gefingerpoken, OnClickListener {
         mGravity = gravity;
     }
 
+    public void setScrollView(View scrollView) {
+        mScrollView = scrollView;
+    }
     public void setGlow(float glow) {
         if (!mGlowAnimationSet.isRunning() || glow == 0f) {
             if (mGlowAnimationSet.isRunning()) {

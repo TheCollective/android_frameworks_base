@@ -1512,6 +1512,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadStringSetting(stmt, Settings.System.AIRPLANE_MODE_TOGGLEABLE_RADIOS,
                     R.string.airplane_mode_toggleable_radios);
+					
+			loadStringSetting(stmt, Settings.System.NOTIFICATION_DATE_LONGCLICK,
+                    R.string.notification_date_longclick);
+					
+			loadStringSetting(stmt, Settings.System.NOTIFICATION_DATE_SHORTCLICK,
+                    R.string.notification_date_shortclick);	
+					
+			loadStringSetting(stmt, Settings.System.NOTIFICATION_CLOCK_LONGCLICK,
+                    R.string.notification_clock_longclick);	
+					
+			loadStringSetting(stmt, Settings.System.NOTIFICATION_CLOCK_SHORTCLICK,
+                    R.string.notification_clock_shortclick);									
 
             loadBooleanSetting(stmt, Settings.System.AUTO_TIME,
                     R.bool.def_auto_time); // Sync time to NITZ
@@ -1555,6 +1567,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             loadIntegerSetting(stmt, Settings.System.POINTER_SPEED,
                     R.integer.def_pointer_speed);
 
+            loadIntegerSetting(stmt, Settings.System.WIFI_SLEEP_POLICY,
+                    R.integer.def_wifi_sleep_policy);
         } finally {
             if (stmt != null) stmt.close();
         }
