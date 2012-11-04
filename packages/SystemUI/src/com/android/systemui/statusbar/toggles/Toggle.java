@@ -81,15 +81,18 @@ public abstract class Toggle implements OnCheckedChangeListener, OnClickListener
 
         hapticTogglesEnabled = Settings.System.getBoolean(mContext.getContentResolver(),
                 Settings.System.HAPTIC_FEEDBACK_TOGGLES_ENABLED, false);
-  //     context.getResources().getColor(R.color.notification_panel_solid_background
+ 
         useAltButtonLayout = Settings.System.getInt(
                 context.getContentResolver(),
                 Settings.System.STATUSBAR_TOGGLES_USE_BUTTONS, 1) == 1;
+                
         ToggletextColor = mResources.getColor(R.color.aocp_toggle_text);
+        
         textColor = Settings.System.getInt(
                 context.getContentResolver(),
                 Settings.System.STATUSBAR_TOGGLES_TEXT_COLOR, ToggletextColor);
-		ToggleenableColor = mResources.getColor(R.color.aocp_toggle_enabled);		
+                
+	ToggleenableColor = mResources.getColor(R.color.aocp_toggle_enabled);		
 
         int enabledColorValue = Settings.System.getInt(
                 context.getContentResolver(),
