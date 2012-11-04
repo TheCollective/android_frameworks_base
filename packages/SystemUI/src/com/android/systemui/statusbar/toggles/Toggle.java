@@ -35,7 +35,7 @@ import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ImageView;
 import android.widget.TextView;
-
+import android.content.res.Resources;
 import com.android.internal.statusbar.IStatusBarService;
 import com.android.systemui.R;
 
@@ -67,10 +67,13 @@ public abstract class Toggle implements OnCheckedChangeListener, OnClickListener
     protected boolean hapticEnabled;
     protected boolean hapticTogglesEnabled;
     protected Vibrator vib;
-
+    private int ToggletextColor;
+	private int ToggleenableColor;
+	private Resources mResources;
+	
     public Toggle(Context context) {
         mContext = context;
-
+        mResources = context.getResources();
         vib = (Vibrator) mContext.getSystemService(mContext.VIBRATOR_SERVICE);
 
         hapticEnabled = Settings.System.getBoolean(mContext.getContentResolver(),
@@ -78,18 +81,19 @@ public abstract class Toggle implements OnCheckedChangeListener, OnClickListener
 
         hapticTogglesEnabled = Settings.System.getBoolean(mContext.getContentResolver(),
                 Settings.System.HAPTIC_FEEDBACK_TOGGLES_ENABLED, false);
-
+  //     context.getResources().getColor(R.color.notification_panel_solid_background
         useAltButtonLayout = Settings.System.getInt(
                 context.getContentResolver(),
                 Settings.System.STATUSBAR_TOGGLES_USE_BUTTONS, 1) == 1;
-
+        ToggletextColor = mResources.getColor(R.color.aocp_toggle_text);
         textColor = Settings.System.getInt(
                 context.getContentResolver(),
-                Settings.System.STATUSBAR_TOGGLES_TEXT_COLOR, 0xFF33B5E5);
+                Settings.System.STATUSBAR_TOGGLES_TEXT_COLOR, ToggletextColor);
+		ToggleenableColor = mResources.getColor(R.color.aocp_toggle_enabled);		
 
         int enabledColorValue = Settings.System.getInt(
                 context.getContentResolver(),
-                Settings.System.STATUSBAR_TOGGLES_ENABLED_COLOR, 0xFFFF8E00);
+                Settings.System.STATUSBAR_TOGGLES_ENABLED_COLOR, ToggleenableColor);
 
         int disabledColorValue = Settings.System.getInt(
                 context.getContentResolver(),
