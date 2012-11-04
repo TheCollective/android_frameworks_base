@@ -2378,9 +2378,9 @@ public class PhoneStatusBar extends BaseStatusBar {
                     e.printStackTrace();
                 }
                 if (mShortClickWeather.equals(ACTION_UPDATE)) {
-                    Intent weatherintent = new Intent("com.aokp.romcontrol.INTENT_WEATHER_REQUEST");
-                    weatherintent.putExtra("com.aokp.romcontrol.INTENT_EXTRA_TYPE", "updateweather");
-                    weatherintent.putExtra("com.aokp.romcontrol.INTENT_EXTRA_ISMANUAL", true);
+                    Intent weatherintent = new Intent("com.collective.personalize.INTENT_WEATHER_REQUEST");
+                    weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_TYPE", "updateweather");
+                    weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_ISMANUAL", true);
                     v.getContext().sendBroadcast(weatherintent);
                 } else {
                     try {
@@ -2411,9 +2411,9 @@ public class PhoneStatusBar extends BaseStatusBar {
                     e.printStackTrace();
                 }
                 if (mLongClickWeather.equals(ACTION_UPDATE)) {
-                    Intent weatherintent = new Intent("com.aokp.romcontrol.INTENT_WEATHER_REQUEST");
-                    weatherintent.putExtra("com.aokp.romcontrol.INTENT_EXTRA_TYPE", "updateweather");
-                    weatherintent.putExtra("com.aokp.romcontrol.INTENT_EXTRA_ISMANUAL", true);
+                    Intent weatherintent = new Intent("com.collective.personalize.INTENT_WEATHER_REQUEST");
+                    weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_TYPE", "updateweather");
+                    weatherintent.putExtra("com.collective.personalize.INTENT_EXTRA_ISMANUAL", true);
                     v.getContext().sendBroadcast(weatherintent);
                 } else {
                     try {
@@ -2624,7 +2624,7 @@ public class PhoneStatusBar extends BaseStatusBar {
             final Animation b =
                     AnimationUtils.makeOutAnimation(mContext, true);
             b.setDuration(400);
-			Slog.d(TAG, "Passes by");
+
 			mQuickToggles.setVisibility(View.VISIBLE);
 			mQuickToggles.requestLayout();
             if ((mWeatherHideStatus == 2) && mWeatherPanelEnabled) {
