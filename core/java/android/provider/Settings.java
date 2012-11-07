@@ -2582,6 +2582,13 @@ public final class Settings {
          * @hide
          */
         public static final String ENABLE_VOLUME_OPTIONS = "enable_volume_options";
+		
+		/**
+         * Setting to enable quietttime.
+         *
+         * @hide
+         */
+		public static final String ENABLE_QUIETTIME = "enable_quiettime";
 
         /**
          * Whether to use the menu key to unlock the screen
