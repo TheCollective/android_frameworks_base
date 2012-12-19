@@ -74,7 +74,7 @@ public class MobileNetworkTypeTile extends QuickSettingsTile {
 
         mLabel = mContext.getString(R.string.quick_settings_network_type);
 
-        onClick = new OnClickListener() {
+        mOnClick = new OnClickListener() {
 
             @Override
             public void onClick(View v) {
@@ -138,7 +138,7 @@ public class MobileNetworkTypeTile extends QuickSettingsTile {
     private static int get2G3G(Context context) {
         int state = 99;
         try {
-            state = Settings.Secure.getInt(context.getContentResolver(),
+            state = Settings.Global.getInt(context.getContentResolver(),
                     Settings.Global.PREFERRED_NETWORK_MODE);
         } catch (SettingNotFoundException e) {
         }
