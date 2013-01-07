@@ -9804,6 +9804,7 @@ package android.hardware {
     method public int getJpegQuality();
     method public int getJpegThumbnailQuality();
     method public android.hardware.Camera.Size getJpegThumbnailSize();
+    method public java.lang.String getPowerMode();
     method public int getMaxExposureCompensation();
     method public int getMaxNumDetectedFaces();
     method public int getMaxNumFocusAreas();
