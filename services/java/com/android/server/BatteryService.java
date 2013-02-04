@@ -117,6 +117,7 @@ public final class BatteryService extends Binder {
     private int mBatteryTemperature;
     private String mBatteryTechnology;
     private boolean mBatteryLevelCritical;
+    private int mInvalidCharger;
     /* End native fields. */
 
     private int mLastBatteryStatus;
@@ -126,9 +127,17 @@ public final class BatteryService extends Binder {
     private int mLastBatteryVoltage;
     private int mLastBatteryTemperature;
     private boolean mLastBatteryLevelCritical;
-
-    private int mInvalidCharger;
     private int mLastInvalidCharger;
+
+    private boolean mHasDockBattery;
+
+    private int mDockBatteryStatus;
+    private int mDockBatteryLevel;
+    private boolean mDockBatteryPresent;
+
+    private int mLastDockBatteryStatus;
+    private int mLastDockBatteryLevel;
+    private boolean mLastDockBatteryPresent;
 
     private int mLowBatteryWarningLevel;
     private int mLowBatteryCloseWarningLevel;
@@ -173,6 +182,9 @@ public final class BatteryService extends Binder {
                 com.android.internal.R.integer.config_lowBatteryCloseWarningLevel);
         mShutdownBatteryTemperature = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_shutdownBatteryTemperature);
+
+        mHasDockBattery = mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_hasDockBattery);
 
         mPowerSupplyObserver.startObserving("SUBSYSTEM=power_supply");
 
@@ -343,6 +355,14 @@ public final class BatteryService extends Binder {
         shutdownIfNoPowerLocked();
         shutdownIfOverTempLocked();
 
+        boolean dockBatteryChanged = false;
+        if (mHasDockBattery &&
+                (mDockBatteryLevel != mLastDockBatteryLevel ||
+                mDockBatteryStatus != mLastDockBatteryStatus ||
+                mDockBatteryPresent != mLastDockBatteryPresent)) {
+            dockBatteryChanged = true;
+        }
+
         if (mBatteryStatus != mLastBatteryStatus ||
                 mBatteryHealth != mLastBatteryHealth ||
                 mBatteryPresent != mLastBatteryPresent ||
@@ -350,7 +370,8 @@ public final class BatteryService extends Binder {
                 mPlugType != mLastPlugType ||
                 mBatteryVoltage != mLastBatteryVoltage ||
                 mBatteryTemperature != mLastBatteryTemperature ||
-                mInvalidCharger != mLastInvalidCharger) {
+                mInvalidCharger != mLastInvalidCharger ||
+                dockBatteryChanged) {
 
             if (mPlugType != mLastPlugType) {
                 if (mLastPlugType == BATTERY_PLUGGED_NONE) {
@@ -473,6 +494,12 @@ public final class BatteryService extends Binder {
             mLastBatteryTemperature = mBatteryTemperature;
             mLastBatteryLevelCritical = mBatteryLevelCritical;
             mLastInvalidCharger = mInvalidCharger;
+
+            if (mHasDockBattery) {
+                mLastDockBatteryLevel = mDockBatteryLevel;
+                mLastDockBatteryStatus = mDockBatteryStatus;
+                mLastDockBatteryPresent = mDockBatteryPresent;
+            }
         }
     }
 
@@ -506,6 +533,23 @@ public final class BatteryService extends Binder {
                     ", AC powered:" + mAcOnline + ", USB powered:" + mUsbOnline +
                     ", Wireless powered:" + mWirelessOnline +
                     ", icon:" + icon  + ", invalid charger:" + mInvalidCharger);
+        }
+
+        if (mHasDockBattery){
+            intent.putExtra(BatteryManager.EXTRA_DOCK_PRESENT, mDockBatteryPresent);
+            intent.putExtra(BatteryManager.EXTRA_DOCK_STATUS, mDockBatteryStatus);
+            intent.putExtra(BatteryManager.EXTRA_DOCK_LEVEL, mDockBatteryLevel);
+        }
+
+        if (false) {
+            Slog.d(TAG, "level:" + mBatteryLevel +
+                    " scale:" + BATTERY_SCALE + " status:" + mBatteryStatus +
+                    " health:" + mBatteryHealth +  " present:" + mBatteryPresent +
+                    " voltage: " + mBatteryVoltage +
+                    " temperature: " + mBatteryTemperature +
+                    " technology: " + mBatteryTechnology +
+                    " AC powered:" + mAcOnline + " USB powered:" + mUsbOnline +
+                    " icon:" + icon  + " invalid charger:" + mInvalidCharger);
         }
 
         mHandler.post(new Runnable() {

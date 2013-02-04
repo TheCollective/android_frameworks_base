@@ -26,6 +26,12 @@ public class BatteryManager {
      * integer containing the current status constant.
      */
     public static final String EXTRA_STATUS = "status";
+
+    /**
+     * Integer containing the current status constant for the dock battery.
+     * @hide
+     */
+    public static final String EXTRA_DOCK_STATUS = "dock_status";
     
     /**
      * Extra for {@link android.content.Intent#ACTION_BATTERY_CHANGED}:
@@ -38,14 +44,26 @@ public class BatteryManager {
      * boolean indicating whether a battery is present.
      */
     public static final String EXTRA_PRESENT = "present";
-    
+
+    /**
+     * Integer containing the current status constant for the dock battery.
+     * @hide
+     */
+    public static final String EXTRA_DOCK_PRESENT = "dock_present";
+
     /**
      * Extra for {@link android.content.Intent#ACTION_BATTERY_CHANGED}:
      * integer field containing the current battery level, from 0 to
      * {@link #EXTRA_SCALE}.
      */
     public static final String EXTRA_LEVEL = "level";
-    
+
+    /**
+     * Integer field containing the current dock battery level.
+     * @hide
+     */
+    public static final String EXTRA_DOCK_LEVEL = "dock_level";
+
     /**
      * Extra for {@link android.content.Intent#ACTION_BATTERY_CHANGED}:
      * integer containing the maximum battery level.
@@ -108,6 +126,13 @@ public class BatteryManager {
     public static final int BATTERY_HEALTH_OVER_VOLTAGE = 5;
     public static final int BATTERY_HEALTH_UNSPECIFIED_FAILURE = 6;
     public static final int BATTERY_HEALTH_COLD = 7;
+
+    /** @hide */
+    public static final int DOCK_BATTERY_STATUS_UNKNOWN = 1;
+    /** @hide */
+    public static final int DOCK_BATTERY_STATUS_CHARGING = 2;
+    /** @hide */
+    public static final int DOCK_BATTERY_STATUS_NOT_CHARGING = 4;
 
     // values of the "plugged" field in the ACTION_BATTERY_CHANGED intent.
     // These must be powers of 2.

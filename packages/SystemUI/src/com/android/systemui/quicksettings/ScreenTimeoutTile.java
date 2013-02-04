@@ -26,7 +26,8 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
     private static final int SCREEN_TIMEOUT_NORMAL =  60000;
     private static final int SCREEN_TIMEOUT_HIGH   = 120000;
     private static final int SCREEN_TIMEOUT_MAX    = 300000;
-
+	private static final int SCREEN_TIMEOUT_ALT    = 360000;
+    private static final int SCREEN_TIMEOUT_ON     = 86400000;
     // cm modes
     private static final int CM_MODE_15_60_300 = 0;
     private static final int CM_MODE_30_120_300 = 1;
@@ -70,7 +71,17 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
 
     protected void updateTileState() {
         int timeout = getScreenTimeout();
+		
+//		if (timeout == 86400000) {
+		
+//		mLabel = "24 hrs";
+		
+//		} else {
+		
         mLabel = makeTimeoutSummaryString(mContext, timeout);
+		
+//		}
+		
         mDrawable = R.drawable.ic_qs_screen_timeout_off;
 
         /* TODO: Determine if we need an on and off state
@@ -114,6 +125,12 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
             }
         } else if (screenTimeout < SCREEN_TIMEOUT_MAX) {
             screenTimeout = SCREEN_TIMEOUT_MAX;
+		} else if (screenTimeout < SCREEN_TIMEOUT_ON) {
+		    if (currentMode == CM_MODE_30_120_300) {
+            screenTimeout = SCREEN_TIMEOUT_ON;
+			} else {
+            screenTimeout = SCREEN_TIMEOUT_MIN;
+			}	
         } else if (currentMode == CM_MODE_30_120_300) {
             screenTimeout = SCREEN_TIMEOUT_LOW;
         } else {
