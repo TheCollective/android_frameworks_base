@@ -71,17 +71,7 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
 
     protected void updateTileState() {
         int timeout = getScreenTimeout();
-		
-//		if (timeout == 86400000) {
-		
-//		mLabel = "24 hrs";
-		
-//		} else {
-		
         mLabel = makeTimeoutSummaryString(mContext, timeout);
-		
-//		}
-		
         mDrawable = R.drawable.ic_qs_screen_timeout_off;
 
         /* TODO: Determine if we need an on and off state

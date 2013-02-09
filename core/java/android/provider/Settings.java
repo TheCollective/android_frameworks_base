@@ -1145,25 +1145,6 @@ public final class Settings {
             return putIntForUser(cr, name, value, UserHandle.myUserId());
         }
 
-        /**
-         * @hide
-         * Convenience function for updating a single settings value as a
-         * boolean. This will either create a new entry in the table if the
-         * given name does not exist, or modify the value of the existing row
-         * with that name.  Note that internally setting values are always
-         * stored as strings, so this function converts the given value to a
-         * string (1 or 0) before storing it.
-         *
-         * @param cr The ContentResolver to access.
-         * @param name The name of the setting to modify.
-         * @param value The new value for the setting.
-         * @return true if the value was set, false on database errors
-         */
-        public static boolean putBoolean(ContentResolver cr, String name, boolean value) {
-            return putString(cr, name, value ? "1" : "0");
-        }
-
-
         /** @hide */
         public static boolean putIntForUser(ContentResolver cr, String name, int value,
                 int userHandle) {
@@ -2005,7 +1986,7 @@ public final class Settings {
          * Whether to prevent loud volume levels when headset is first plugged in.
          * @hide
          */
-        public static final String SAFE_HEADSET_VOLUME_RESTORE = "safe_headset_volume_restore";
+        public static final String SAFE_HEADSET_VOLUME = "safe_headset_volume";
 
         /**
          * Master volume (float in the range 0.0f to 1.0f).
@@ -2762,13 +2743,6 @@ public final class Settings {
         * @hide
         */
         public static final String EXPANDED_NETWORK_MODE = "expanded_network_mode";
-
-        /**
-         * Notification Power Widget - Custom LTE Toggle
-         * 1 - lte on, 0 - lte off
-         * @hide
-         */
-        public static final String LTE_MODE = "lte_mode";
 
         /**
         * Notification Power Widget - Custom Screen Timeout

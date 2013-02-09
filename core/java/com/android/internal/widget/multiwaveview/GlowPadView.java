@@ -970,6 +970,7 @@ public class GlowPadView extends View {
             switchToState(STATE_TRACKING, x, y);
             updateGlowPosition(x, y);
         }
+
         if (mActiveTarget != activeTarget) {
             // Defocus the old target
             if (mActiveTarget != -1) {
