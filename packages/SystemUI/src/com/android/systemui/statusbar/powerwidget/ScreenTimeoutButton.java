@@ -22,7 +22,6 @@ public class ScreenTimeoutButton extends PowerButton {
     private static final int SCREEN_TIMEOUT_NORMAL =  60000;
     private static final int SCREEN_TIMEOUT_HIGH   = 120000;
     private static final int SCREEN_TIMEOUT_MAX    = 300000;
-	private static final int SCREEN_TIMEOUT_ON     = 86400000;
 
     // cm modes
     private static final int CM_MODE_15_60_300 = 0;
@@ -93,12 +92,6 @@ public class ScreenTimeoutButton extends PowerButton {
             }
         } else if (screenTimeout < SCREEN_TIMEOUT_MAX) {
             screenTimeout = SCREEN_TIMEOUT_MAX;
-		} else if (screenTimeout < SCREEN_TIMEOUT_ON) {
-		    if (currentMode == CM_MODE_30_120_300) {
-            screenTimeout = SCREEN_TIMEOUT_ON;
-			} else {
-            screenTimeout = SCREEN_TIMEOUT_MIN;
-			}
         } else if (currentMode == CM_MODE_30_120_300) {
             screenTimeout = SCREEN_TIMEOUT_LOW;
         } else {
