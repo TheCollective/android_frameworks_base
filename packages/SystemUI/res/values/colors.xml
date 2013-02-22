@@ -29,6 +29,10 @@
     <drawable name="notification_item_background_legacy_color">#ffaaaaaa</drawable>
     <drawable name="intruder_bg_pressed">#ff33B5E5</drawable>
     <drawable name="notification_header_bg">#FF000000</drawable>
+    <color name="circle_battery_font">#ffffffff</color>
+    <color name="circle_battery_mod">#ffff8e00</color>
+    <color name="darker_gray">#ff959595</color>
+    <color name="holo_red_light">#ffdd1212</color>
 
     <!-- ==================== system bar only ==================== -->
     <drawable name="system_bar_background">#ff000000</drawable>

@@ -39,7 +39,7 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.android.internal.R;
+import com.android.systemui.R;
 
 /***
  * Note about CircleBattery Implementation:
@@ -211,8 +211,8 @@ public class CircleBattery extends ImageView {
         mPaintSystem.setStrokeCap(Paint.Cap.BUTT);
         mPaintRed.setStrokeCap(Paint.Cap.BUTT);
 
-        mPaintFont.setColor(res.getColor(R.color.holo_blue_dark));
-        mPaintSystem.setColor(res.getColor(R.color.holo_blue_dark));
+        mPaintFont.setColor(res.getColor(R.color.circle_battery_font));
+        mPaintSystem.setColor(res.getColor(R.color.circle_battery_mod));
         // could not find the darker definition anywhere in resources
         // do not want to use static 0x404040 color value. would break theming.
         mPaintGray.setColor(res.getColor(R.color.darker_gray));
@@ -401,11 +401,13 @@ public class CircleBattery extends ImageView {
      * resource. unfortunately, those resources have transparent/empty borders
      * so we have to count the used pixel manually and deduct the size from
      * it. quiet complicated, but the only way to fit properly into the
-     * statusbar for all resolutions
+     * statusbar for all resolutions. We also need a static image so that the
+	 * image will always be the same and people can theme the normal images 
+	 * and leave this one alone it will only be used to get the proper size
      */
     private void initSizeMeasureIconHeight() {
         final Bitmap measure = BitmapFactory.decodeResource(getResources(),
-                com.android.systemui.R.drawable.stat_sys_wifi_signal_4_fully);
+                com.android.systemui.R.drawable.cyanogenmod_circle_battery_mod);
         final int x = measure.getWidth() / 2;
 
         mCircleSize = 0;
