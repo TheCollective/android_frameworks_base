@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FlashlightButton extends PowerButton {
-    private Camera mCamera;
+    private Camera mCamera = null;
 	private Camera.Parameters mParams;
 	private boolean useScreen;
 	private boolean useLed = false;
@@ -37,6 +37,7 @@ public class FlashlightButton extends PowerButton {
 
     @Override
     protected void toggleState(Context context) {
+	    mCamera = null;
 	    checkCamera();
 		
 	    if (useScreen == true) {

@@ -21,6 +21,7 @@ public class TorchTile extends QuickSettingsTile {
 	private Camera.Parameters mParams;
 	private boolean useScreen;
 	private boolean useLed = false;
+	private static final String TAG="Camera";
 
     public TorchTile(Context context, LayoutInflater inflater,
             QuickSettingsContainerView container,
@@ -30,17 +31,19 @@ public class TorchTile extends QuickSettingsTile {
         mOnClick = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+			mCamera = null;
+	    	checkCamera();	
         if (useScreen == true) {
 		if (mCamera != null) {
 		    mCamera.release();
 			}
-		Intent intent = new Intent(Intent.ACTION_MAIN);
-        intent.setClassName("android.flashlight", "android.flashlight.FlashlightActivity");
-        startSettingsActivity(intent);
+	    	Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.setClassName("android.flashlight", "android.flashlight.FlashlightActivity");
+            startSettingsActivity(intent);
    
 		
 		} else {
-		useLed = true;
+	        	useLed = true;
                 Intent i = new Intent("net.cactii.flash2.TOGGLE_FLASHLIGHT");
                 mContext.sendBroadcast(i);
 				}
@@ -90,7 +93,7 @@ public class TorchTile extends QuickSettingsTile {
             try {
                 mCamera = Camera.open();
             } catch (RuntimeException e) {
-              //  Log.e(TAG, "Camera.open() failed: " + e.getMessage());
+              Log.e(TAG, "Camera.open() failed: " + e.getMessage());
             }
         }
     }
@@ -98,14 +101,14 @@ public class TorchTile extends QuickSettingsTile {
 	if (useLed == false) {
         getCamera();
         if (mCamera == null) {
-         //   Log.d(TAG, "Camera not Found!");
+            Log.d(TAG, "Camera not Found!");
             useScreen = true;
             return;
         }
        
         mParams = mCamera.getParameters();
         if (mParams == null) {
-   //         Log.d(TAG, "Camera Params not Found!");
+            Log.d(TAG, "Camera Params not Found!");
 			useScreen = true;
 			mCamera.release();
             return;
@@ -113,7 +116,7 @@ public class TorchTile extends QuickSettingsTile {
         List<String> flashModes = mParams.getSupportedFlashModes();
         // Check if camera flash exists
         if (flashModes == null) {
-  //          Log.d(TAG, "Camera Flash not Found!");
+            Log.d(TAG, "Camera Flash not Found!");
 			useScreen = true;
 			mCamera.release();
             return;
