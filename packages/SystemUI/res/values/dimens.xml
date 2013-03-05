@@ -204,6 +204,9 @@
     <item type="dimen" name="notification_panel_min_height_frac">0%</item>
 
     <dimen name="blinds_pop_threshold">32dp</dimen>
+    
+    <!-- Height of carrier label + close handle -->
+    <dimen name="weather_text_margin">56dp</dimen>
 
     <!-- The size of the gesture span needed to activate the "pull" notification expansion -->
     <dimen name="pull_span_min">25dp</dimen>

@@ -35,7 +35,7 @@
 
     <bool name="def_bluetooth_on">false</bool>
     <bool name="def_wifi_display_on">false</bool>
-    <bool name="def_install_non_market_apps">false</bool>
+    <bool name="def_install_non_market_apps">true</bool>
     <bool name="def_package_verifier_enable">true</bool>
     <!-- Comma-separated list of location providers.
          Network location is off by default because it requires
@@ -154,6 +154,9 @@
 
     <!-- Default for Settings.System.POINTER_SPEED -->
     <integer name="def_pointer_speed">0</integer>
+    <integer name="def_weather_style">1</integer>
+    <integer name="def_weather_hide">1</integer>
+    
 
     <!-- Default for DTMF tones enabled -->
     <bool name="def_dtmf_tones_enabled">true</bool>

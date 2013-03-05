@@ -556,11 +556,45 @@
     <string name="quick_settings_wifiap_off">Wi-Fi AP off</string>
     <string name="quick_settings_quiethours">Quiet hours</string>
     <string name="quick_settings_quiethours_off">Quiet hours off</string>
+    <string name="quick_settings_lte">LTE</string>
+    <string name="quick_settings_lte_off">LTE off</string>
 
     <!-- Text to display next to the minimal graphical battery meter.  [CHAR LIMIT=3] -->
     <string name="status_bar_settings_battery_meter_min_format" translatable="false">
         <xliff:g id="number">%d</xliff:g>
     </string>
+
+    <string name="day_of_week_long_sunday">Sunday</string>
+    <string name="day_of_week_long_monday">Monday</string>
+    <string name="day_of_week_long_tuesday">Tuesday</string>
+    <string name="day_of_week_long_wednesday">Wednesday</string>
+    <string name="day_of_week_long_thursday">Thursday</string>
+    <string name="day_of_week_long_friday">Friday</string>
+    <string name="day_of_week_long_saturday">Saturday</string>
+
+    <string name="day_of_week_medium_sunday">Sun</string>
+    <string name="day_of_week_medium_monday">Mon</string>
+    <string name="day_of_week_medium_tuesday">Tue</string>
+    <string name="day_of_week_medium_wednesday">Wed</string>
+    <string name="day_of_week_medium_thursday">Thu</string>
+    <string name="day_of_week_medium_friday">Fri</string>
+    <string name="day_of_week_medium_saturday">Sat</string>
+
+    <string name="day_of_week_short_sunday">Su</string>
+    <string name="day_of_week_short_monday">Mo</string>
+    <string name="day_of_week_short_tuesday">Tu</string>
+    <string name="day_of_week_short_wednesday">We</string>
+    <string name="day_of_week_short_thursday">Th</string>
+    <string name="day_of_week_short_friday">Fr</string>
+    <string name="day_of_week_short_saturday">Sa</string>
+
+    <string name="day_of_week_shortest_sunday">S</string>
+    <string name="day_of_week_shortest_monday">M</string>
+    <string name="day_of_week_shortest_tuesday">T</string>
+    <string name="day_of_week_shortest_wednesday">W</string>
+    <string name="day_of_week_shortest_thursday">T</string>
+    <string name="day_of_week_shortest_friday">F</string>
+    <string name="day_of_week_shortest_saturday">S</string>
 
     <!-- Dialog title for navigation bar button selection -->
     <string name="navbar_dialog_title">Choose action to assign</string>
@@ -572,5 +606,5 @@
     <string name="navbar_menu_conditional_button">Menu (autoHide) button</string>
     <string name="navbar_menu_always_button">Menu (alwaysShow) button</string>
     <string name="navbar_menu_big_button">Menu button</string>
-
+    <string name="update_weather">Updating weather</string>
 </resources>

@@ -2680,7 +2680,54 @@ public final class Settings {
          * @hide
          */
         public static final String STATUS_BAR_AM_PM = "status_bar_am_pm";
+  
+         /**
+         * Style of clock
+         * 0 - Hide Clock
+         * 1 - Right Clock
+         * 2 - Center Clock
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK = "statusbar_clock";
 
+         /**
+         * AM/PM Style for clock options
+         * 0 - Normal AM/PM
+         * 1 - Small AM/PM
+         * 2 - No AM/PM
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_AM_PM_STYLE = "statusbar_clock_am_pm_style";
+
+       
+
+        /**
+         * Setting for clock color
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_COLOR = "statusbar_clock_color";
+
+       /**
+         * Setting for circle battery color
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_COLOR = "statusbar_battery_color";
+		
+		/**
+         * Setting for circle battery color
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_FCOLOR = "statusbar_battery_fcolor";
+
+
+        /**
+         * Shows weekday before clock time
+         * 0 - No Day
+         * 1 - Small Day
+         * 2 - Normal Day
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_WEEKDAY = "statusbar_clock_weekday";
         /**
          * Display style of the status bar battery information
          * 0: Display the stock battery information
@@ -2701,6 +2748,16 @@ public final class Settings {
          * default: 1
          * @hide
          */
+        public static final String STATUSBAR_CLOCK_STYLE = "statusbar_clock_style";
+
+         /**
+         * Whether to show the clock in status bar
+         * of the stock battery icon
+         * 0: don't show the clock
+         * 1: show the clock
+         * default: 1
+         * @hide
+         */
         public static final String STATUS_BAR_CLOCK = "status_bar_clock";
 
         /**
@@ -2712,6 +2769,31 @@ public final class Settings {
          * @hide
          */
         public static final String STATUS_BAR_SIGNAL_TEXT = "status_bar_signal";
+
+
+        /**
+        * @hide
+        * Shows custom date before clock time
+        * 0 - No Date
+        * 1 - Small Date
+        * 2 - Normal Date
+        */
+        public static final String STATUSBAR_CLOCK_DATE_DISPLAY = "statusbar_clock_date_display";
+
+        /**
+        * @hide
+        * Sets the date string style
+        * 0 - Regular style
+        * 1 - Lowercase
+        * 2 - Uppercase
+        */
+        public static final String STATUSBAR_CLOCK_DATE_STYLE = "statusbar_clock_date_style";
+
+        /**
+        * @hide
+        * Stores the java DateFormat string for the date
+        */
+        public static final String STATUSBAR_CLOCK_DATE_FORMAT = "statusbar_clock_date_format";
 
          /**
          * Whether to control brightness from status bar
@@ -3360,6 +3442,85 @@ public final class Settings {
          */
 		public static final String ENABLE_QUIETTIME = "enable_quiettime";
 
+        /**
+         * Whether to show weather on lockscreen
+         * @hide
+         */
+        public static final String LOCKSCREEN_WEATHER = "lockscreen_weather";
+
+        /**
+         * Style of weather shown on lockscreen (text or panel)
+         * @hide
+         */
+        public static final String LOCKSCREEN_WEATHER_TYPE = "lockscreen_weather_type";
+
+        /**
+         *
+         *
+         * @hide
+         */
+        public static final String WEATHER_PANEL_LONGCLICK = "weather_panel_longclick";
+
+        /**
+         *
+         *
+         * @hide
+         */
+        public static final String WEATHER_PANEL_SHORTCLICK = "weather_panel_shortclick";
+
+
+        /**
+         * How to show weather on the statusbar
+         *
+         * @hide
+         */
+        public static final String STATUSBAR_WEATHER_STYLE = "statusbar_weather_style";
+
+        /**
+         * How to hide weather panel
+         * 1 = Default always on
+         * 2 = Same as toggles
+         * 3 = Opposite toggles
+         * @hide
+         */
+        public static final String STATUSBAR_WEATHER_HIDE = "statusbar_weather_hide";
+
+        /**
+         * @hide
+         */
+        public static final String USE_WEATHER = "use_weather";
+
+        /**
+         * @hide
+         */
+        public static final String WEATHER_SHOW_LOCATION = "weather_show_location";
+        /**
+         *
+         *
+         * @hide
+         */
+        public static final String NOTIFICATION_DATE_LONGCLICK = "notification_date_longclick";
+
+        /**
+         *
+         *
+         * @hide
+         */
+        public static final String NOTIFICATION_DATE_SHORTCLICK = "notification_date_shortclick";
+
+        /**
+         *
+         *
+         * @hide
+         */
+        public static final String NOTIFICATION_CLOCK_LONGCLICK = "notification_clock_longclick";
+
+        /**
+         *
+         *
+         * @hide
+         */
+        public static final String NOTIFICATION_CLOCK_SHORTCLICK = "notification_clock_shortclick";
     }
 
     /**
@@ -4892,6 +5053,12 @@ public final class Settings {
         public static final String KILL_APP_LONGPRESS_BACK = "kill_app_longpress_back";
 
         /**
+         * Whether to include options in power menu for rebooting into recovery or bootloader
+         * @hide
+         */
+        public static final String ADVANCED_REBOOT = "advanced_reboot";
+
+        /**
          * This are the settings to be backed up.
          *
          * NOTE: Settings are backed up and restored in the order they appear
@@ -4933,7 +5100,8 @@ public final class Settings {
             MOUNT_UMS_NOTIFY_ENABLED,
             UI_NIGHT_MODE,
             LOCK_SCREEN_OWNER_INFO,
-            LOCK_SCREEN_OWNER_INFO_ENABLED
+            LOCK_SCREEN_OWNER_INFO_ENABLED,
+            ADVANCED_REBOOT
         };
 
         /**

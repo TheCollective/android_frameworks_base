@@ -4066,7 +4066,40 @@
     <string name="safe_media_volume_warning" product="default">
        "Raise volume above safe level?\nListening at high volume for long periods may damage your hearing."
     </string>
+       <!-- Lockscreen weather slash string -->
+    <string name="weatherpanel_slash">/</string>
+    <string name="update_weather">Updating weather</string>
+    <string name="day_of_week_long_sunday">Sunday</string>
+    <string name="day_of_week_long_monday">Monday</string>
+    <string name="day_of_week_long_tuesday">Tuesday</string>
+    <string name="day_of_week_long_wednesday">Wednesday</string>
+    <string name="day_of_week_long_thursday">Thursday</string>
+    <string name="day_of_week_long_friday">Friday</string>
+    <string name="day_of_week_long_saturday">Saturday</string>
 
+    <string name="day_of_week_medium_sunday">Sun</string>
+    <string name="day_of_week_medium_monday">Mon</string>
+    <string name="day_of_week_medium_tuesday">Tue</string>
+    <string name="day_of_week_medium_wednesday">Wed</string>
+    <string name="day_of_week_medium_thursday">Thu</string>
+    <string name="day_of_week_medium_friday">Fri</string>
+    <string name="day_of_week_medium_saturday">Sat</string>
+
+    <string name="day_of_week_short_sunday">Su</string>
+    <string name="day_of_week_short_monday">Mo</string>
+    <string name="day_of_week_short_tuesday">Tu</string>
+    <string name="day_of_week_short_wednesday">We</string>
+    <string name="day_of_week_short_thursday">Th</string>
+    <string name="day_of_week_short_friday">Fr</string>
+    <string name="day_of_week_short_saturday">Sa</string>
+
+    <string name="day_of_week_shortest_sunday">S</string>
+    <string name="day_of_week_shortest_monday">M</string>
+    <string name="day_of_week_shortest_tuesday">T</string>
+    <string name="day_of_week_shortest_wednesday">W</string>
+    <string name="day_of_week_shortest_thursday">T</string>
+    <string name="day_of_week_shortest_friday">F</string>
+    <string name="day_of_week_shortest_saturday">S</string>
     <!-- Text spoken when the user is performing a gesture that will enable accessibility. [CHAR LIMIT=none] -->
     <string name="continue_to_enable_accessibility">Keep holding down two fingers to enable accessibility.</string>
     <!-- Text spoken when the user enabled accessibility. [CHAR LIMIT=none] -->

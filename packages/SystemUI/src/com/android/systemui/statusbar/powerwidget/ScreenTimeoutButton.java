@@ -22,6 +22,7 @@ public class ScreenTimeoutButton extends PowerButton {
     private static final int SCREEN_TIMEOUT_NORMAL =  60000;
     private static final int SCREEN_TIMEOUT_HIGH   = 120000;
     private static final int SCREEN_TIMEOUT_MAX    = 300000;
+	private static final int SCREEN_TIMEOUT_24     = 86400000;
 
     // cm modes
     private static final int CM_MODE_15_60_300 = 0;
@@ -49,12 +50,24 @@ public class ScreenTimeoutButton extends PowerButton {
     protected void updateState(Context context) {
         int timeout = getScreenTimeout(context);
 
-        if (timeout <= SCREEN_TIMEOUT_LOW) {
-            mIcon = R.drawable.stat_screen_timeout_off;
+        if (timeout == SCREEN_TIMEOUT_MIN) {
+            mIcon = R.drawable.stat_screen_timeout_15s;
             mState = STATE_DISABLED;
-        } else if (timeout <= SCREEN_TIMEOUT_HIGH) {
-            mIcon = R.drawable.stat_screen_timeout_off;
+        } else if (timeout == SCREEN_TIMEOUT_LOW) {
+            mIcon = R.drawable.stat_screen_timeout_30s;
             mState = STATE_INTERMEDIATE;
+		} else if (timeout == SCREEN_TIMEOUT_NORMAL) {
+            mIcon = R.drawable.stat_screen_timeout_1m;
+            mState = STATE_INTERMEDIATE;
+		} else if (timeout == SCREEN_TIMEOUT_HIGH) {
+            mIcon = R.drawable.stat_screen_timeout_2m;
+            mState = STATE_ENABLED;
+		} else if (timeout == SCREEN_TIMEOUT_MAX) {
+            mIcon = R.drawable.stat_screen_timeout_5m;
+            mState = STATE_INTERMEDIATE;
+		} else if (timeout == SCREEN_TIMEOUT_24) {
+            mIcon = R.drawable.stat_screen_timeout_24h;
+            mState = STATE_ENABLED;				
         } else {
             mIcon = R.drawable.stat_screen_timeout_on;
             mState = STATE_ENABLED;
@@ -92,6 +105,12 @@ public class ScreenTimeoutButton extends PowerButton {
             }
         } else if (screenTimeout < SCREEN_TIMEOUT_MAX) {
             screenTimeout = SCREEN_TIMEOUT_MAX;
+		} else if (screenTimeout < SCREEN_TIMEOUT_24) {
+		    if (currentMode == CM_MODE_30_120_300) {
+            screenTimeout = SCREEN_TIMEOUT_24;
+			} else {
+            screenTimeout = SCREEN_TIMEOUT_MIN;
+			}
         } else if (currentMode == CM_MODE_30_120_300) {
             screenTimeout = SCREEN_TIMEOUT_LOW;
         } else {

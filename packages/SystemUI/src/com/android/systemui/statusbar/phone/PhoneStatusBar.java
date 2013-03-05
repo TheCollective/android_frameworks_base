@@ -28,14 +28,23 @@ import android.animation.ObjectAnimator;
 import android.animation.TimeInterpolator;
 import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
+import android.app.Dialog;
+import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.StatusBarManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
+import android.provider.AlarmClock;
+import android.provider.CalendarContract;
+import android.provider.CalendarContract.Events;
+import android.content.ActivityNotFoundException;
+import android.content.res.Configuration;
 import android.content.SharedPreferences;
 import android.content.res.CustomTheme;
 import android.content.res.Resources;
@@ -59,6 +68,7 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.service.dreams.DreamService;
 import android.service.dreams.IDreamManager;
+import android.speech.RecognizerIntent;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
@@ -78,6 +88,7 @@ import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.Animation.AnimationListener;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -106,7 +117,8 @@ import com.android.systemui.statusbar.policy.NotificationRowLayout;
 import com.android.systemui.statusbar.policy.OnSizeChangedListener;
 import com.android.systemui.statusbar.policy.Prefs;
 import com.android.systemui.statusbar.powerwidget.PowerWidget;
-
+import com.android.systemui.statusbar.policy.WeatherPanel;
+import java.net.URISyntaxException;
 public class PhoneStatusBar extends BaseStatusBar {
     static final String TAG = "PhoneStatusBar";
     public static final boolean DEBUG = BaseStatusBar.DEBUG;
@@ -191,7 +203,18 @@ public class PhoneStatusBar extends BaseStatusBar {
 
     // left-hand icons
     LinearLayout mStatusIcons;
+    // layout for center clock
+    LinearLayout mCenterClockLayout;
     // the icons themselves
+    final static String ACTION_EVENT = "**event**";
+    final static String ACTION_ALARM = "**alarm**";
+    final static String ACTION_TODAY = "**today**";
+    final static String ACTION_VOICEASSIST = "**assist**";
+    final static String ACTION_NOTHING = "**nothing**";
+    final static String ACTION_UPDATE = "**update**";
+    private Intent intent;
+	private String mShortClick;
+    private String mLongClick;
     IconMerger mNotificationIcons;
     // [+>
     View mMoreIcon;
@@ -220,6 +243,11 @@ public class PhoneStatusBar extends BaseStatusBar {
     View mDateTimeView;
     View mClearButton;
     ImageView mSettingsButton, mNotificationButton;
+    // AoCP - weatherpanel
+    int mWeatherPanelEnabled;
+    boolean mWeatherGoneOnBoot;
+   
+    WeatherPanel mWeatherPanel;
 
     // carrier/wifi label
     private TextView mCarrierLabel;
@@ -502,6 +530,7 @@ public class PhoneStatusBar extends BaseStatusBar {
         mNotificationIcons = (IconMerger)mStatusBarView.findViewById(R.id.notificationIcons);
         mNotificationIcons.setOverflowIndicator(mMoreIcon);
         mStatusBarContents = (LinearLayout)mStatusBarView.findViewById(R.id.status_bar_contents);
+        mCenterClockLayout = (LinearLayout)mStatusBarView.findViewById(R.id.center_clock_layout);
         mTickerView = mStatusBarView.findViewById(R.id.ticker);
 
         /* Destroy the old widget before recreating the expanded dialog
@@ -525,12 +554,21 @@ public class PhoneStatusBar extends BaseStatusBar {
 
         mHasSettingsPanel = res.getBoolean(R.bool.config_hasSettingsPanel);
         mHasFlipSettings = res.getBoolean(R.bool.config_hasFlipSettingsPanel);
+		
+        mWeatherPanel = (WeatherPanel) mStatusBarWindow.findViewById(R.id.weatherpanel);  
 
         mDateTimeView = mNotificationPanelHeader.findViewById(R.id.datetime);
         if (mHasFlipSettings) {
-            mDateTimeView.setOnClickListener(mClockClickListener);
+     
             mDateTimeView.setEnabled(true);
         }
+	   
+	    mDateView.setOnClickListener(mDateViewListener);
+        mDateView.setOnLongClickListener(mDateViewLongClickListener);
+
+        SettingsObserver settingsObserver = new SettingsObserver(new Handler());
+        settingsObserver.observe();
+        updateSettings();
 
         mSettingsButton = (ImageView) mStatusBarWindow.findViewById(R.id.settings_button);
         if (mSettingsButton != null) {
@@ -707,7 +745,7 @@ public class PhoneStatusBar extends BaseStatusBar {
                 }
                 mQS.setService(this);
                 mQS.setBar(mStatusBarView);
-                mQS.updateResources();
+                mQS.setupQuickSettings();
 
                 // Start observing for changes
                 mTilesChangedObserver = new TilesChangedObserver(mHandler);
@@ -746,6 +784,15 @@ public class PhoneStatusBar extends BaseStatusBar {
         mPowerWidget.updateVisibility();
 
         mVelocityTracker = VelocityTracker.obtain();
+		updateSettings();
+        
+	    if (mWeatherPanelEnabled == 0) {
+               mWeatherPanel.setVisibility(View.GONE);
+        } else {
+               mWeatherPanel.setVisibility(View.VISIBLE);
+        }
+		
+		
 
         return mStatusBarView;
     }
@@ -1091,7 +1138,8 @@ public class PhoneStatusBar extends BaseStatusBar {
                 mHandler.sendEmptyMessage(MSG_HIDE_INTRUDER);
             }
 
-            if (CLOSE_PANEL_WHEN_EMPTIED && mNotificationData.size() == 0 && !mAnimating) {
+            if (CLOSE_PANEL_WHEN_EMPTIED && mNotificationData.size() == 0 && !mAnimating
+                    && !isShowingSettings()) {
                 animateCollapsePanels();
             }
         }
@@ -1304,10 +1352,16 @@ public class PhoneStatusBar extends BaseStatusBar {
         if (mStatusBarView == null) return;
         ContentResolver resolver = mContext.getContentResolver();
         View clock = mStatusBarView.findViewById(R.id.clock);
-        mShowClock = (Settings.System.getInt(resolver,
-                Settings.System.STATUS_BAR_CLOCK, 1) == 1);
-        if (clock != null) {
-            clock.setVisibility(show ? (mShowClock ? View.VISIBLE : View.GONE) : View.GONE);
+        View cclock = mStatusBarView.findViewById(R.id.center_clock);
+        boolean rightClock = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 1);
+        boolean centerClock = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 2);
+        if (rightClock && clock != null) {
+            clock.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        if (centerClock && cclock != null) {
+            cclock.setVisibility(show ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -1655,9 +1709,6 @@ public class PhoneStatusBar extends BaseStatusBar {
             return;
         }
 
-        // Settings are not available in setup
-        if (!mUserSetup) return;
-
         if (mHasFlipSettings) {
             mNotificationPanel.expand();
             if (mFlipSettingsView.getVisibility() != View.VISIBLE) {
@@ -1671,9 +1722,6 @@ public class PhoneStatusBar extends BaseStatusBar {
     }
 
     public void switchToSettings() {
-        // Settings are not available in setup
-        if (!mUserSetup) return;
-
         mFlipSettingsView.setScaleX(1f);
         mFlipSettingsView.setVisibility(View.VISIBLE);
         mSettingsButton.setVisibility(View.GONE);
@@ -1730,9 +1778,6 @@ public class PhoneStatusBar extends BaseStatusBar {
     }
 
     public void flipToSettings() {
-        // Settings are not available in setup
-        if (!mUserSetup) return;
-
         if (mFlipSettingsViewAnim != null) mFlipSettingsViewAnim.cancel();
         if (mScrollViewAnim != null) mScrollViewAnim.cancel();
         if (mSettingsButtonAnim != null) mSettingsButtonAnim.cancel();
@@ -1849,6 +1894,16 @@ public class PhoneStatusBar extends BaseStatusBar {
         if ((mDisabled & StatusBarManager.DISABLE_NOTIFICATION_ICONS) == 0) {
             setNotificationIconVisibility(true, com.android.internal.R.anim.fade_in);
         }
+
+        
+        if (mWeatherPanelEnabled == 0) {
+                  mWeatherPanel.setVisibility(View.GONE);
+        }else{
+		          mWeatherPanel.setVisibility(View.VISIBLE);
+        }
+      
+
+       
 
         // Close any "App info" popups that might have snuck on-screen
         dismissPopups();
@@ -2270,6 +2325,7 @@ public class PhoneStatusBar extends BaseStatusBar {
         public void tickerStarting() {
             mTicking = true;
             mStatusBarContents.setVisibility(View.GONE);
+            mCenterClockLayout.setVisibility(View.GONE);
             mTickerView.setVisibility(View.VISIBLE);
             mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_up_in, null));
             mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
@@ -2278,6 +2334,7 @@ public class PhoneStatusBar extends BaseStatusBar {
         @Override
         public void tickerDone() {
             mStatusBarContents.setVisibility(View.VISIBLE);
+            mCenterClockLayout.setVisibility(View.VISIBLE);
             mTickerView.setVisibility(View.GONE);
             mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
             mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_down_out,
@@ -2287,8 +2344,10 @@ public class PhoneStatusBar extends BaseStatusBar {
         @Override
         public void tickerHalting() {
             mStatusBarContents.setVisibility(View.VISIBLE);
+            mCenterClockLayout.setVisibility(View.VISIBLE);
             mTickerView.setVisibility(View.GONE);
             mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
+            mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
             // we do not animate the ticker away at this point, just get rid of it (b/6992707)
         }
     }
@@ -2583,11 +2642,86 @@ public class PhoneStatusBar extends BaseStatusBar {
         }
     };
 
-    private final View.OnClickListener mClockClickListener = new View.OnClickListener() {
-        @Override
+    private View.OnClickListener mDateViewListener = new View.OnClickListener() {
         public void onClick(View v) {
-            startActivityDismissingKeyguard(
-                    new Intent(Intent.ACTION_QUICK_CLOCK), true); // have fun, everyone
+		updateSettings();
+        if (mShortClick.equals(ACTION_NOTHING)) {
+            // Do nothing....
+        } else {
+            try {
+                ActivityManagerNative.getDefault().dismissKeyguardOnNextActivity();
+            } catch (RemoteException e) {
+            }
+            if (mShortClick.equals(ACTION_TODAY)) {
+                 // A date-time specified in milliseconds since the epoch.
+                 long startMillis = System.currentTimeMillis();
+                 Uri.Builder builder = CalendarContract.CONTENT_URI.buildUpon();
+                 builder.appendPath("time");
+                 ContentUris.appendId(builder, startMillis);
+                 intent = new Intent(Intent.ACTION_VIEW)
+                      .setData(builder.build());
+            } else if (mShortClick.equals(ACTION_EVENT)) {
+                 intent = new Intent(Intent.ACTION_INSERT)
+                      .setData(Events.CONTENT_URI);
+            } else if (mShortClick.equals(ACTION_VOICEASSIST)) {
+                 intent = new Intent(RecognizerIntent.ACTION_WEB_SEARCH);
+            } else if (mShortClick.equals(ACTION_ALARM)) {
+                 intent = new Intent(AlarmClock.ACTION_SET_ALARM);
+            } else {
+                try {
+                    intent = Intent.parseUri(mShortClick, 0);
+                } catch (URISyntaxException e) {
+                }
+            }
+               try {
+                   intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                   mContext.startActivity(intent);
+               } catch (ActivityNotFoundException e){
+               }
+            animateCollapsePanels();
+            }
+        }
+    };
+   private View.OnLongClickListener mDateViewLongClickListener = new View.OnLongClickListener() {
+
+        @Override
+        public boolean onLongClick(View v) {
+        if (mLongClick.equals(ACTION_NOTHING)) {
+            // Do nothing....
+        } else {
+            try {
+                ActivityManagerNative.getDefault().dismissKeyguardOnNextActivity();
+            } catch (RemoteException e) {
+            }
+            if (mLongClick.equals(ACTION_TODAY)) {
+                 // A date-time specified in milliseconds since the epoch.
+                 long startMillis = System.currentTimeMillis();
+                 Uri.Builder builder = CalendarContract.CONTENT_URI.buildUpon();
+                 builder.appendPath("time");
+                 ContentUris.appendId(builder, startMillis);
+                 intent = new Intent(Intent.ACTION_VIEW)
+                      .setData(builder.build());
+            } else if (mLongClick.equals(ACTION_EVENT)) {
+                 intent = new Intent(Intent.ACTION_INSERT)
+                      .setData(Events.CONTENT_URI);
+            } else if (mLongClick.equals(ACTION_VOICEASSIST)) {
+                 intent = new Intent(RecognizerIntent.ACTION_WEB_SEARCH);
+            } else if (mLongClick.equals(ACTION_ALARM)) {
+                 intent = new Intent(AlarmClock.ACTION_SET_ALARM);
+            } else {
+                try {
+                    intent = Intent.parseUri(mLongClick, 0);
+                } catch (URISyntaxException e) {
+                }
+            }
+               try {
+                   intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                   mContext.startActivity(intent);
+               } catch (ActivityNotFoundException e){
+               }
+            animateCollapsePanels();
+			}
+            return true;
         }
     };
 
@@ -2605,11 +2739,9 @@ public class PhoneStatusBar extends BaseStatusBar {
             String action = intent.getAction();
             if (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(action)) {
                 int flags = CommandQueue.FLAG_EXCLUDE_NONE;
-                if (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(action)) {
-                    String reason = intent.getStringExtra("reason");
-                    if (reason != null && reason.equals(SYSTEM_DIALOG_REASON_RECENT_APPS)) {
-                        flags |= CommandQueue.FLAG_EXCLUDE_RECENTS_PANEL;
-                    }
+                String reason = intent.getStringExtra("reason");
+                if (reason != null && reason.equals(SYSTEM_DIALOG_REASON_RECENT_APPS)) {
+                    flags |= CommandQueue.FLAG_EXCLUDE_RECENTS_PANEL;
                 }
                 animateCollapsePanels(flags);
             }
@@ -2911,9 +3043,15 @@ public class PhoneStatusBar extends BaseStatusBar {
 
         @Override
         public void onChange(boolean selfChange) {
+            onChange(selfChange, null);
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
             if (mSettingsContainer != null) {
-                mQS.updateResources();
+                mQS.setupQuickSettings();
             }
+			updateSettings();
         }
 
         public void startObserving() {
@@ -2942,6 +3080,33 @@ public class PhoneStatusBar extends BaseStatusBar {
                     Settings.System.getUriFor(Settings.System.QS_DYNAMIC_WIFI),
                     false, this);
         }
+    }
+	public void updateSettings() {
+        ContentResolver cr = mStatusBarView.getContext().getContentResolver();
+
+        mShortClick = Settings.System.getString(cr,
+                Settings.System.NOTIFICATION_CLOCK_SHORTCLICK);
+
+        mLongClick = Settings.System.getString(cr,
+                Settings.System.NOTIFICATION_CLOCK_LONGCLICK);
+
+       
+
+        if (mShortClick == null || mShortClick == "") {
+            mShortClick = "**nothing**";
+        }
+        if (mLongClick == null || mLongClick == "") {
+            mLongClick = "**nothing**";
+        }
+
+   
+
+       
+        
+        mWeatherPanelEnabled = (Settings.System.getInt(cr,
+		 Settings.System.USE_WEATHER, 0));
+
+        
     }
 
 }

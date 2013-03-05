@@ -60,6 +60,8 @@ public class CircleBattery extends ImageView {
     private boolean mActivated;     // whether or not activated due to system settings
     private boolean mPercentage;    // whether or not to show percentage number
     private boolean mBatteryPlugged;// whether or not battery is currently plugged
+	private int     mBatteryColor;
+	private int     mBatteryFColor;
     private int     mBatteryStatus; // current battery status
     private int     mLevel;         // current battery level
     private int     mAnimOffset;    // current level of charging animation
@@ -98,10 +100,30 @@ public class CircleBattery extends ImageView {
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.STATUS_BAR_BATTERY), false, this);
             onChange(true);
+			
+			resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUSBAR_BATTERY_COLOR), true,
+                    this);
+			onChange(true);	
+			
+			resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUSBAR_BATTERY_FCOLOR), true,
+                    this);
+			onChange(true);	
         }
 
         @Override
         public void onChange(boolean selfChange) {
+		
+		    int mDefaultColor = mContext.getResources().getColor(R.color.circle_battery_mod);
+		    int mDefaultFColor = mContext.getResources().getColor(R.color.circle_battery_font);
+			
+		    mBatteryColor = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_BATTERY_COLOR, mDefaultColor);
+				
+			mBatteryFColor = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_BATTERY_FCOLOR, mDefaultFColor);	
+		
             int batteryStyle = (Settings.System.getInt(mContext.getContentResolver(),
                     Settings.System.STATUS_BAR_BATTERY, 0));
 
@@ -211,8 +233,8 @@ public class CircleBattery extends ImageView {
         mPaintSystem.setStrokeCap(Paint.Cap.BUTT);
         mPaintRed.setStrokeCap(Paint.Cap.BUTT);
 
-        mPaintFont.setColor(res.getColor(R.color.circle_battery_font));
-        mPaintSystem.setColor(res.getColor(R.color.circle_battery_mod));
+        mPaintFont.setColor(mBatteryColor);
+        mPaintSystem.setColor(mBatteryColor);
         // could not find the darker definition anywhere in resources
         // do not want to use static 0x404040 color value. would break theming.
         mPaintGray.setColor(res.getColor(R.color.darker_gray));
@@ -317,7 +339,7 @@ public class CircleBattery extends ImageView {
             mPaintFont.setColor(usePaint.getColor());
             canvas.drawText("?", textX, mTextY, mPaintFont);
         } else if (internalLevel < 100 && mPercentage) {
-            mPaintFont.setColor(usePaint.getColor());
+            mPaintFont.setColor(mBatteryFColor);
             canvas.drawText(Integer.toString(internalLevel), textX, mTextY, mPaintFont);
         }
 
@@ -407,7 +429,7 @@ public class CircleBattery extends ImageView {
      */
     private void initSizeMeasureIconHeight() {
         final Bitmap measure = BitmapFactory.decodeResource(getResources(),
-                com.android.systemui.R.drawable.cyanogenmod_circle_battery_mod);
+                com.android.systemui.R.drawable.stat_sys_wifi_signal_4_fully);
         final int x = measure.getWidth() / 2;
 
         mCircleSize = 0;
