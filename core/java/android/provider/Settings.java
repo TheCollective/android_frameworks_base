@@ -2759,6 +2759,32 @@ public final class Settings {
          * @hide
          */
         public static final String STATUS_BAR_CLOCK = "status_bar_clock";
+		
+        /**
+         * Sets the alpha of notification wallpaper
+         * @hide
+         */
+        public static final String NOTIF_WALLPAPER_ALPHA = "notif_wallpaper_alpha";
+		
+       /**
+        * Sets the alpha (transparency) of notifications
+        * @hide
+        */
+        public static final String NOTIF_ALPHA = "notif_alpha";
+		
+		
+        /**
+        * Sets the portrait background of notification drawer
+        * @hide
+        */
+        public static final String NOTIFICATION_BACKGROUND = "notification_background";
+
+       /**
+        * Sets the landscape background of notification drawer
+        * @hide
+        */
+        public static final String NOTIFICATION_BACKGROUND_LANDSCAPE = "notification_background_landscape";
+
 
         /**
          * Whether to show the signal text or signal bars.
