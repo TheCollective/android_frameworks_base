@@ -2536,7 +2536,7 @@ public final class Settings {
          */
         public static final String QUICK_SETTINGS_TILES = "quick_settings_tiles";
 
-	/**
+	    /**
          * number of tiles per row in quick settings
          *
          * @hide

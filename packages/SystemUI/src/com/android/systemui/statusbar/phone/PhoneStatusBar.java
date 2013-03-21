@@ -863,7 +863,7 @@ public class PhoneStatusBar extends BaseStatusBar {
     }
 
     void onBarViewDetached() {
-     // WindowManagerImpl.getDefault().removeView(mStatusBarWindow);
+     //  WindowManagerImpl.getDefault().removeView(mStatusBarWindow);
     }
 
     @Override
@@ -3097,21 +3097,25 @@ public class PhoneStatusBar extends BaseStatusBar {
                     Settings.System.getUriFor(Settings.System.QS_DYNAMIC_WIFI),
                     false, this);
 					
-            cr.registerContentObserver(
+		    cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.QUICK_TILES_PER_ROW),
                     false, this);
 
             cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.QUICK_TILES_PER_ROW_DUPLICATE_LANDSCAPE),
-                    false, this);
-
+                    false, this);			
+					
             cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.NOTIF_WALLPAPER_ALPHA),
                     false, this);
 					
 			cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.NOTIFICATION_BACKGROUND),
-                    false, this);		
+                    false, this);	
+					
+		    cr.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.NOTIF_ALPHA),
+                    false, this);
 					
 					
         }

@@ -1523,6 +1523,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             upgradeVersion = 95;
         }
+        if (upgradeVersion == 95) {
+            // New setting to configure advanced reboot options.
+            db.beginTransaction();
+            SQLiteStatement stmt = null;
+            try {
+                stmt = db.compileStatement("INSERT INTO secure(name,value)"
+                        + " VALUES(?,?);");
+                loadIntegerSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
+                        R.integer.def_reboot_preference);
+                stmt.close();
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+                if (stmt != null) stmt.close();
+            }
+            upgradeVersion = 96;
+        }
 
         // *** Remember to update DATABASE_VERSION above!
 
@@ -2059,6 +2076,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadStringSetting(stmt, Settings.Secure.ACCESSIBILITY_SCREEN_READER_URL,
                     R.string.def_accessibility_screen_reader_url);
+					
+			loadIntegerSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
+                        R.integer.def_reboot_preference);		
 
             if (SystemProperties.getBoolean("ro.lockscreen.disable.default", false) == true) {
                 loadSetting(stmt, Settings.System.LOCKSCREEN_DISABLED, "1");
