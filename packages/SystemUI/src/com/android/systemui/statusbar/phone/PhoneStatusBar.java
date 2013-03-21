@@ -3103,7 +3103,12 @@ public class PhoneStatusBar extends BaseStatusBar {
 					
 			cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.NOTIFICATION_BACKGROUND),
-                    false, this);		
+                    false, this);	
+					
+		    cr.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.NOTIF_ALPHA),
+                    false, this);
+			
 					
 					
         }
