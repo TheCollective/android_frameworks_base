@@ -1530,8 +1530,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             try {
                 stmt = db.compileStatement("INSERT INTO secure(name,value)"
                         + " VALUES(?,?);");
-                loadIntegerSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
-                        R.integer.def_reboot_preference);
+                loadBooleanSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
+                        R.bool.def_reboot_preference);
                 stmt.close();
                 db.setTransactionSuccessful();
             } finally {
@@ -2077,8 +2077,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             loadStringSetting(stmt, Settings.Secure.ACCESSIBILITY_SCREEN_READER_URL,
                     R.string.def_accessibility_screen_reader_url);
 					
-			loadIntegerSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
-                        R.integer.def_reboot_preference);		
+			loadBooleanSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
+                    R.bool.def_reboot_preference);		
 
             if (SystemProperties.getBoolean("ro.lockscreen.disable.default", false) == true) {
                 loadSetting(stmt, Settings.System.LOCKSCREEN_DISABLED, "1");
