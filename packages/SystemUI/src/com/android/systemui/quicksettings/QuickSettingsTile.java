@@ -34,6 +34,7 @@ public class QuickSettingsTile implements OnClickListener {
     protected String mLabel;
     protected PhoneStatusBar mStatusbarService;
     protected QuickSettingsController mQsc;
+    protected int mTileTextSize; 
 
     public QuickSettingsTile(Context context, LayoutInflater inflater, QuickSettingsContainerView container, QuickSettingsController qsc) {
         mContext = context;
@@ -44,17 +45,18 @@ public class QuickSettingsTile implements OnClickListener {
         mStatusbarService = qsc.mStatusBarService;
         mQsc = qsc;
         mTileLayout = R.layout.quick_settings_tile_generic;
+        mTileTextSize = ((QuickSettingsContainerView) mContainerView).updateTileTextSize(); 
     }
 
-    public void setupQuickSettingsTile(){
-        createQuickSettings();
-        onPostCreate();
-        updateQuickSettings();
-        mTile.setOnClickListener(this);
-        mTile.setOnLongClickListener(mOnLongClick);
+    public void setupQuickSettingsTile() {
+            createQuickSettings();
+            onPostCreate();
+            updateQuickSettings();
+            mTile.setOnClickListener(this);
+            mTile.setOnLongClickListener(mOnLongClick);
     }
 
-    void createQuickSettings(){
+    void createQuickSettings() {
         mTile = (QuickSettingsTileView) mInflater.inflate(R.layout.quick_settings_tile, mContainerView, false);
         mTile.setContent(mTileLayout, mInflater);
         mContainerView.addView(mTile);
@@ -72,13 +74,14 @@ public class QuickSettingsTile implements OnClickListener {
         }
     }
 
-    void updateQuickSettings(){
+    void updateQuickSettings() {
         TextView tv = (TextView) mTile.findViewById(R.id.tile_textview);
         tv.setCompoundDrawablesWithIntrinsicBounds(0, mDrawable, 0, 0);
         tv.setText(mLabel);
+        tv.setTextSize(1, mTileTextSize);
     }
 
-    void startSettingsActivity(String action){
+    void startSettingsActivity(String action) {
         Intent intent = new Intent(action);
         startSettingsActivity(intent);
     }

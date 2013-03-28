@@ -863,7 +863,7 @@ public class PhoneStatusBar extends BaseStatusBar {
     }
 
     void onBarViewDetached() {
-     //  WindowManagerImpl.getDefault().removeView(mStatusBarWindow);
+     // WindowManagerImpl.getDefault().removeView(mStatusBarWindow);
     }
 
     @Override
