@@ -263,7 +263,8 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                 || secureCameraDisabled;
         final KeyguardUpdateMonitor monitor = KeyguardUpdateMonitor.getInstance(getContext());
         boolean disabledBySimState = monitor.isSimLocked();
-        boolean cameraPresent = mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA);
+        boolean cameraPresent =
+            isTargetPresent(com.android.internal.R.drawable.ic_lockscreen_camera);
         boolean searchTargetPresent =
             isTargetPresent(com.android.internal.R.drawable.ic_action_assist_generic);
 
@@ -394,14 +395,7 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                             }
                             TargetDrawable nDrawable = new TargetDrawable(res, getLayeredDrawable(back,front, tmpInset, frontBlank));
                             ComponentName compName = in.getComponent();
-                            if (compName != null) {
-                                String cls = compName.getClassName();
-                                if (cls.equals("com.android.camera.CameraLauncher")) {
-                                    nDrawable.setEnabled(!mCameraDisabled);
-                                } else if (cls.equals("SearchActivity")) {
-                                    nDrawable.setEnabled(!mSearchDisabled);
-                                }
-                            }
+                       
                             storedDraw.add(nDrawable);
                         } catch (Exception e) {
                             storedDraw.add(new TargetDrawable(res, 0));
