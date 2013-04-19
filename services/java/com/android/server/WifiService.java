@@ -33,6 +33,7 @@ import android.database.ContentObserver;
 import android.net.wifi.IWifiManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiChannel;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiStateMachine;
@@ -942,6 +943,18 @@ public class WifiService extends IWifiManager.Stub {
             return false;
         }
     }
+
+    public List<WifiChannel> getSupportedChannels() {
+        enforceAccessPermission();
+        if (mWifiStateMachineChannel != null) {
+            return (mWifiStateMachine.syncGetSupportedChannels(mWifiStateMachineChannel));
+        } else {
+            Slog.e(TAG, "mWifiStateMachineChannel is not initialized");
+            return null;
+        }
+    }
+
+
 
     /**
      * Return the DHCP-assigned addresses from the last successful DHCP request,
