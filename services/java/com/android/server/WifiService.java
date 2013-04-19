@@ -954,8 +954,6 @@ public class WifiService extends IWifiManager.Stub {
         }
     }
 
-
-
     /**
      * Return the DHCP-assigned addresses from the last successful DHCP request,
      * if any.
