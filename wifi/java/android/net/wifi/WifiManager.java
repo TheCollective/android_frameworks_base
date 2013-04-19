@@ -897,7 +897,6 @@ public class WifiManager {
     }
 
     /**
-
      * Return the DHCP-assigned addresses from the last successful DHCP request,
      * if any.
      * @return the DHCP information
