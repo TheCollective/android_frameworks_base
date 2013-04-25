@@ -247,6 +247,12 @@ class WallpaperManagerService extends IWallpaperManager.Stub {
                 mEngine = null;
                 if (mWallpaper.connection == this) {
                     Slog.w(TAG, "Wallpaper service gone: " + mWallpaper.wallpaperComponent);
+                   /* //>hide this section for now? Should futher testing can be done? Looks like it prevents theme wallpaper from being released.
+                    *if (mWallpaper.wallpaperComponent.equals(IMAGE_WALLPAPER)) {
+                    *    Slog.w(TAG, "SystemUI wallpaper disconnected, assuming it's being restarted, not clearing wallpaper.");
+                    *    return;
+                    *}
+                    */
                     if (!mWallpaper.wallpaperUpdating
                             && (mWallpaper.lastDiedTime + MIN_WALLPAPER_CRASH_TIME)
                                 > SystemClock.uptimeMillis()
