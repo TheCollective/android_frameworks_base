@@ -23,10 +23,9 @@ public class TorchTile extends QuickSettingsTile {
 	private boolean useLed = false;
 	private static final String TAG="Camera";
 
-    public TorchTile(Context context, LayoutInflater inflater,
-            QuickSettingsContainerView container,
+    public TorchTile(Context context, 
             QuickSettingsController qsc, Handler handler) {
-        super(context, inflater, container, qsc);
+        super(context, qsc);
 
         mOnClick = new View.OnClickListener() {
             @Override

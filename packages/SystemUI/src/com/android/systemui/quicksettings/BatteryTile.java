@@ -16,6 +16,7 @@ import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.BatteryController.BatteryStateChangeCallback;
 
 public class BatteryTile extends QuickSettingsTile implements BatteryStateChangeCallback{
+    private BatteryController mController;
 
     private boolean charging = false;
     private int batteryLevel = 0;
@@ -24,11 +25,10 @@ public class BatteryTile extends QuickSettingsTile implements BatteryStateChange
     private LevelListDrawable batteryLevels;
     private LevelListDrawable chargingBatteryLevels;
 
-    public BatteryTile(Context context, LayoutInflater inflater,
-            QuickSettingsContainerView container, QuickSettingsController qsc) {
-        super(context, inflater, container, qsc);
+    public BatteryTile(Context context, QuickSettingsController qsc, BatteryController controller) {
+        super(context, qsc, R.layout.quick_settings_tile_battery);
 
-        mTileLayout = R.layout.quick_settings_tile_battery;
+        mController = controller;
 
         mOnClick = new View.OnClickListener() {
             @Override
@@ -41,9 +41,14 @@ public class BatteryTile extends QuickSettingsTile implements BatteryStateChange
     @Override
     void onPostCreate() {
         updateTile();
-        BatteryController controller = new BatteryController(mContext);
-        controller.addStateChangedCallback(this);
+        mController.addStateChangedCallback(this);
         super.onPostCreate();
+    }
+
+    @Override
+    public void onDestroy() {
+        mController.removeStateChangedCallback(this);
+        super.onDestroy();
     }
 
     @Override
@@ -80,10 +85,6 @@ public class BatteryTile extends QuickSettingsTile implements BatteryStateChange
     void updateQuickSettings() {
         TextView tv = (TextView) mTile.findViewById(R.id.battery_textview);
         tv.setText(mLabel);
-        tv.setTextSize(1, mTileTextSize);
-        if (mTileTextColor != -2) {
-            tv.setTextColor(mTileTextColor);
-        }
         ImageView iv = (ImageView) mTile.findViewById(R.id.battery_image);
         iv.setImageDrawable(batteryIcon);
         iv.setImageLevel(batteryLevel);
