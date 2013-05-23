@@ -20,6 +20,9 @@
     <!-- Name of the status bar as seen in the applications info settings page. [CHAR LIMIT=12] -->
     <string name="app_label">System UI</string>
 
+    <!-- Content description of the data connection type DC-HSPA+ for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
+    <string name="accessibility_data_connection_DC">DCHSPAP</string>
+
     <!-- The text for the button in the notification window-shade that clears
          all of the currently visible notifications. [CHAR LIMIT=10]-->
     <string name="status_bar_clear_all_button">Clear</string>
