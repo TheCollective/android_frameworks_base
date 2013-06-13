@@ -752,6 +752,8 @@ public final class ContactsContract {
         public static final String SYNC3 = "sync3";
         /** Generic column for use by sync adapters. */
         public static final String SYNC4 = "sync4";
+         /** Facebook sync */
+        public static final String IS_RESTRICTED = "is_restricted";
     }
 
     /**
@@ -832,6 +834,13 @@ public final class ContactsContract {
          * <P>Type: TEXT (URI to the ringtone)</P>
          */
         public static final String CUSTOM_RINGTONE = "custom_ringtone";
+
+         /**
+          * URI for a custom notification associated with the contact. If null or missing,
+          * the default notification is used.
+          * <P>Type: TEXT (URI to the notification)</P>
+          */
+        public static final String CUSTOM_NOTIFICATION = "custom_notification";
 
         /**
          * Whether the contact should always be sent to voicemail. If missing,
