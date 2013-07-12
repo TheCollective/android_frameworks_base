@@ -1132,5 +1132,6 @@
 
     <!-- Integer to configure panel auto brightness mode when changed -->
     <integer name="config_panelAutoBrightnessValue">-1</integer>
-
+    
+    <bool name="config_enableIrdaManagerService">false</bool>
 </resources>

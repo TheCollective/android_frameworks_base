@@ -13,7 +13,16 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/alarms/old/Alarm_Classic.ogg:system/media/audio/alarms/Alarm_Classic.ogg \
 	$(LOCAL_PATH)/alarms/old/Alarm_Rooster_01.ogg:system/media/audio/alarms/Alarm_Rooster_01.ogg \
 	$(LOCAL_PATH)/alarms/old/Alarm_Rooster_02.ogg:system/media/audio/alarms/Alarm_Rooster_02.ogg \
-
+	$(LOCAL_PATH)/alarms/old/A_toy_watch.ogg:system/media/audio/alarms/A_toy_watch.ogg \
+	$(LOCAL_PATH)/alarms/old/Get_up.ogg:system/media/audio/alarms/Get_up.ogg \
+	$(LOCAL_PATH)/alarms/old/Good_Morning.ogg:system/media/audio/alarms/Good_Morning.ogg \
+	$(LOCAL_PATH)/alarms/old/Reveille.ogg:system/media/audio/alarms/Reveille.ogg \
+	$(LOCAL_PATH)/alarms/old/Rooster.ogg:system/media/audio/alarms/Rooster.ogg \
+	$(LOCAL_PATH)/alarms/old/Wake_up_and_get_up.ogg:system/media/audio/alarms/Wake_up_and_get_up.ogg \
+	$(LOCAL_PATH)/alarms/old/Wake_up.ogg:system/media/audio/alarms/Wake_up.ogg \
+	$(LOCAL_PATH)/alarms/old/Alarm_WakeUp.ogg:system/media/audio/alarms/Alarm_WakeUp.ogg \
+	$(LOCAL_PATH)/alarms/old/Work_work.ogg:system/media/audio/alarms/Work_work.ogg \
+								
 # Effects
 PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/effects/old/camera_click.ogg:system/media/audio/ui/camera_click.ogg \
@@ -71,3 +80,7 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/ringtones/old/Ring_Synth_03.ogg:system/media/audio/ringtones/Ring_Synth_03.ogg \
 	$(LOCAL_PATH)/ringtones/old/Ring_Synth_04.ogg:system/media/audio/ringtones/Ring_Synth_04.ogg \
 	$(LOCAL_PATH)/ringtones/old/Ring_Synth_05.ogg:system/media/audio/ringtones/Ring_Synth_05.ogg \
+	$(LOCAL_PATH)/ringtones/old/Crazy_Chicken.ogg:system/media/audio/ringtones/Crazy_Chicken.ogg \
+	$(LOCAL_PATH)/ringtones/old/Innovation.ogg:system/media/audio/ringtones/Innovation.ogg \
+	$(LOCAL_PATH)/ringtones/old/Old_bell.ogg:system/media/audio/ringtones/Old_bell.ogg \
+	

@@ -2699,6 +2699,18 @@
     <string name="permlab_updateLock">discourage automatic device updates</string>
     <!-- Description of an application permission which allows the application to suggest that now is a bad time to reboot the device in order to apply an OTA.  [CHAR LIMIT=NONE] -->
     <string name="permdesc_updateLock">Allows the holder to offer information to the system about when would be a good time for a noninteractive reboot to upgrade the device.</string>
+   <!-- Title of an application permission, listed so the user can choose whether they want to allow the application to do this. -->
+    <string name="permlab_cancelNotifications">cancel application notifications</string>
+    <!-- Description of an application permission, listed so the user can choose whether they want to allow the application to do this. -->
+    <string name="permdesc_cancelNotifications">Allows the app to cancel notifications created by other apps.</string>
+
+    <!-- Title of an application permission, listed so the user can choose whether they want to allow the application to do this. -->
+    <string name="permlab_interceptSmsSent">intercept outgoing SMS</string>
+    <!-- Description of an application permission, listed so the user can choose whether they want to allow the application to do this. -->
+    <string name="permdesc_interceptSmsSent">Allows the app to
+        intercept an outgoing SMS.
+        Malicious apps may use this to prevent outgoing SMS messages.</string>
+
 
     <!-- If the user enters a password in a form on a website, a dialog will come up asking if they want to save the password. Text in the save password dialog, asking if the browser should remember a password. -->
     <string name="save_password_message">Do you want the browser to remember this password?</string>
@@ -4184,10 +4196,4 @@
     <string name="privacy_guard_notification">Privacy Guard active</string>
     <string name="privacy_guard_notification_detail"><xliff:g id="app">%1$s</xliff:g> will not be able to access personal data</string>
 
-    <!-- Title of an application permission, listed so the user can choose whether they want to allow the application to do this. -->
-    <string name="permlab_interceptSmsSent">intercept outgoing SMS</string>
-    <!-- Description of an application permission, listed so the user can choose whether they want to allow the application to do this. -->
-    <string name="permdesc_interceptSmsSent">Allows the app to
-        intercept an outgoing SMS.
-        Malicious apps may use this to prevent outgoing SMS messages.</string>
 </resources>
