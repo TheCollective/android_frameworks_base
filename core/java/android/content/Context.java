@@ -45,6 +45,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * Interface to global information about an application environment.  This is
@@ -255,6 +256,12 @@ public abstract class Context {
      * Return the Looper for the main thread of the current process.  This is
      * the thread used to dispatch calls to application components (activities,
      * services, etc).
+     * <p>
+     * By definition, this method returns the same result as would be obtained
+     * by calling {@link Looper#getMainLooper() Looper.getMainLooper()}.
+     * </p>
+     *
+     * @return The main looper.
      */
     public abstract Looper getMainLooper();
 
@@ -417,6 +424,9 @@ public abstract class Context {
 
     /** Return the name of this application's package. */
     public abstract String getPackageName();
+
+    /** @hide Return the name of the base context this context is derived from. */
+    public abstract String getBasePackageName();
 
     /** Return the full application info for this context's package. */
     public abstract ApplicationInfo getApplicationInfo();
@@ -1135,6 +1145,14 @@ public abstract class Context {
             String receiverPermission);
 
     /**
+     * Like {@link #sendBroadcast(Intent, String)}, but also allows specification
+     * of an assocated app op as per {@link android.app.AppOpsManager}.
+     * @hide
+     */
+    public abstract void sendBroadcast(Intent intent,
+            String receiverPermission, int appOp);
+
+    /**
      * Broadcast the given intent to all interested BroadcastReceivers, delivering
      * them one at a time to allow more preferred receivers to consume the
      * broadcast before it is delivered to less preferred receivers.  This
@@ -1201,6 +1219,17 @@ public abstract class Context {
      */
     public abstract void sendOrderedBroadcast(Intent intent,
             String receiverPermission, BroadcastReceiver resultReceiver,
+            Handler scheduler, int initialCode, String initialData,
+            Bundle initialExtras);
+
+    /**
+     * Like {@link #sendOrderedBroadcast(Intent, String, BroadcastReceiver, android.os.Handler,
+     * int, String, android.os.Bundle)}, but also allows specification
+     * of an assocated app op as per {@link android.app.AppOpsManager}.
+     * @hide
+     */
+    public abstract void sendOrderedBroadcast(Intent intent,
+            String receiverPermission, int appOp, BroadcastReceiver resultReceiver,
             Handler scheduler, int initialCode, String initialData,
             Bundle initialExtras);
 
@@ -1677,7 +1706,7 @@ public abstract class Context {
      * argument for use by system server and other multi-user aware code.
      * @hide
      */
-    public boolean bindService(Intent service, ServiceConnection conn, int flags, int userHandle) {
+    public boolean bindServiceAsUser(Intent service, ServiceConnection conn, int flags, UserHandle user) {
         throw new RuntimeException("Not implemented. Must override in a subclass.");
     }
 
@@ -1740,9 +1769,6 @@ public abstract class Context {
      *  <dt> {@link #ALARM_SERVICE} ("alarm")
      *  <dd> A {@link android.app.AlarmManager} for receiving intents at the
      *  time of your choosing.
-     *  <dt> {@link #IRDA_SERVICE} ("irda")
-     *  <dd> A {@link android.hardware.IrdaManager} for sending IR codes
-     *  with the IR emitter
      *  <dt> {@link #NOTIFICATION_SERVICE} ("notification")
      *  <dd> A {@link android.app.NotificationManager} for informing the user
      *   of background events.
@@ -1790,8 +1816,6 @@ public abstract class Context {
      * @see android.os.PowerManager
      * @see #ALARM_SERVICE
      * @see android.app.AlarmManager
-     * @see #IRDA_SERVICE
-     * @see android.hardware.IrdaManager
      * @see #NOTIFICATION_SERVICE
      * @see android.app.NotificationManager
      * @see #KEYGUARD_SERVICE
@@ -1882,16 +1906,6 @@ public abstract class Context {
      * @see android.app.AlarmManager
      */
     public static final String ALARM_SERVICE = "alarm";
-
-    /**
-     * Use with {@link #getSystemService} to retrieve a
-     * {@link android.hardware.IrdaManager} for sending IR codes
-     * with the IR emitter
-     *
-     * @see #getSystemService
-     * @see android.hardware.IrdaManager
-     */
-    public static final String IRDA_SERVICE = "irda";
 
     /**
      * Use with {@link #getSystemService} to retrieve a
@@ -2017,17 +2031,6 @@ public abstract class Context {
      * @see android.net.ConnectivityManager
      */
     public static final String CONNECTIVITY_SERVICE = "connectivity";
-
-    /**
-     * Use with {@link #getSystemService} to retrieve a {@link
-     * android.net.ThrottleManager} for handling management of
-     * throttling.
-     *
-     * @hide
-     * @see #getSystemService
-     * @see android.net.ThrottleManager
-     */
-    public static final String THROTTLE_SERVICE = "throttle";
 
     /**
      * Use with {@link #getSystemService} to retrieve a {@link
@@ -2209,7 +2212,6 @@ public abstract class Context {
      * {@link android.bluetooth.BluetoothAdapter} for using Bluetooth.
      *
      * @see #getSystemService
-     * @hide
      */
     public static final String BLUETOOTH_SERVICE = "bluetooth";
 
@@ -2280,6 +2282,18 @@ public abstract class Context {
      * @see android.os.UserManager
      */
     public static final String USER_SERVICE = "user";
+
+    /**
+     * Use with {@link #getSystemService} to retrieve a
+     * {@link android.app.AppOpsManager} for tracking application operations
+     * on the device.
+     *
+     * @see #getSystemService
+     * @see android.app.AppOpsManager
+     *
+     * @hide
+     */
+    public static final String APP_OPS_SERVICE = "appops";
 
     /**
      * Determine whether the application or calling application has
@@ -2703,6 +2717,14 @@ public abstract class Context {
     public abstract Context createPackageContextAsUser(
             String packageName, int flags, UserHandle user)
             throws PackageManager.NameNotFoundException;
+
+    /**
+     * Get the userId associated with this context
+     * @return user id
+     *
+     * @hide
+     */
+    public abstract int getUserId();
 
     /**
      * Return a new Context object for the current Context but whose resources

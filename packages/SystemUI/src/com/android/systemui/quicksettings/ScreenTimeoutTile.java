@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.net.Uri;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,8 +24,7 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
     private static final int SCREEN_TIMEOUT_NORMAL =  60000;
     private static final int SCREEN_TIMEOUT_HIGH   = 120000;
     private static final int SCREEN_TIMEOUT_MAX    = 300000;
-	private static final int SCREEN_TIMEOUT_ALT    = 360000;
-    private static final int SCREEN_TIMEOUT_24     = 86400000;
+
     // cm modes
     private static final int CM_MODE_15_60_300 = 0;
     private static final int CM_MODE_30_120_300 = 1;
@@ -116,21 +116,15 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
             }
         } else if (screenTimeout < SCREEN_TIMEOUT_MAX) {
             screenTimeout = SCREEN_TIMEOUT_MAX;
-		} else if (screenTimeout < SCREEN_TIMEOUT_24) {
-		    if (currentMode == CM_MODE_30_120_300) {
-            screenTimeout = SCREEN_TIMEOUT_24;
-			} else {
-            screenTimeout = SCREEN_TIMEOUT_MIN;
-			}	
         } else if (currentMode == CM_MODE_30_120_300) {
             screenTimeout = SCREEN_TIMEOUT_LOW;
         } else {
             screenTimeout = SCREEN_TIMEOUT_MIN;
         }
 
-        Settings.System.putInt(
+        Settings.System.putIntForUser(
                 mContext.getContentResolver(),
-                Settings.System.SCREEN_OFF_TIMEOUT, screenTimeout);
+                Settings.System.SCREEN_OFF_TIMEOUT, screenTimeout, UserHandle.USER_CURRENT);
     }
 
     private String makeTimeoutSummaryString(Context context, int timeout) {
@@ -165,12 +159,13 @@ public class ScreenTimeoutTile extends QuickSettingsTile {
     }
 
     private int getScreenTimeout() {
-        return Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.SCREEN_OFF_TIMEOUT, 0);
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.SCREEN_OFF_TIMEOUT, 0, UserHandle.USER_CURRENT);
     }
 
     private int getCurrentCMMode() {
-        return Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.EXPANDED_SCREENTIMEOUT_MODE, CM_MODE_15_60_300);
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.EXPANDED_SCREENTIMEOUT_MODE, CM_MODE_15_60_300,
+                UserHandle.USER_CURRENT);
     }
 }

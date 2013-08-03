@@ -166,11 +166,6 @@ public class Process {
     public static final int LAST_SHARED_APPLICATION_GID = 59999;
 
     /**
-     * Defines a secondary group id for access to the bluetooth hardware.
-     */
-    public static final int BLUETOOTH_GID = 2000;
-
-    /**
      * Standard priority of application threads.
      * Use with {@link #setThreadPriority(int)} and
      * {@link #setThreadPriority(int, int)}, <b>not</b> with the normal
@@ -379,7 +374,7 @@ public class Process {
      * @param gids Additional group-ids associated with the process.
      * @param debugFlags Additional flags.
      * @param targetSdkVersion The target SDK version for the app.
-     * @param seInfo null-ok SE Android information for the new process.
+     * @param seInfo null-ok SELinux information for the new process.
      * @param zygoteArgs Additional arguments to supply to the zygote process.
      * 
      * @return An object that describes the result of the attempt to start the process.
@@ -559,7 +554,7 @@ public class Process {
      * new process should setgroup() to.
      * @param debugFlags Additional flags.
      * @param targetSdkVersion The target SDK version for the app.
-     * @param seInfo null-ok SE Android information for the new process.
+     * @param seInfo null-ok SELinux information for the new process.
      * @param extraArgs Additional arguments to supply to the zygote process.
      * @return An object that describes the result of the attempt to start the process.
      * @throws ZygoteStartFailedEx if process start failed for any reason
@@ -806,7 +801,15 @@ public class Process {
      */
     public static final native void setProcessGroup(int pid, int group)
             throws IllegalArgumentException, SecurityException;
-    
+
+    /**
+     * Return the scheduling group of requested process.
+     *
+     * @hide
+     */
+    public static final native int getProcessGroup(int pid)
+            throws IllegalArgumentException, SecurityException;
+
     /**
      * Set the priority of the calling thread, based on Linux priorities.  See
      * {@link #setThreadPriority(int, int)} for more information.

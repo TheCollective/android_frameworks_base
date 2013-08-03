@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-permission android:name="android.permission.INJECT_EVENTS" />
+    <uses-permission android:name="android.permission.DUMP" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <uses-permission android:name="android.permission.STATUS_BAR_SERVICE" />
@@ -37,6 +38,7 @@
     <uses-permission android:name="android.permission.ACCESS_4G_STATE" />
     <uses-permission android:name="android.permission.CHANGE_4G_STATE" />
     <uses-permission android:name="com.android.phone.CHANGE_NETWORK_MODE" />
+    <uses-permission android:name="android.permission.CONNECTIVITY_INTERNAL" />
 
     <!-- Physical hardware -->
     <uses-permission android:name="android.permission.MANAGE_USB" />
@@ -45,9 +47,7 @@
     <uses-permission android:name="android.permission.UPDATE_DEVICE_STATS" />
     <uses-permission android:name="android.permission.MASTER_CLEAR" />
     <uses-permission android:name="android.permission.VIBRATE" />
-
-    <!--Halo-->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- ActivityManager -->
     <uses-permission android:name="android.permission.GET_TASKS" />
@@ -59,7 +59,8 @@
     <uses-permission android:name="android.permission.START_ANY_ACTIVITY" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
-
+    <uses-permission android:name="android.permission.GET_TOP_ACTIVITY_INFO" />
+    
     <!-- WindowManager -->
     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -76,7 +77,6 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
-    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:persistent="true"
@@ -84,7 +84,8 @@
         android:allowBackup="false"
         android:hardwareAccelerated="true"
         android:label="@string/app_label"
-        android:icon="@*android:drawable/platlogo">
+        android:icon="@*android:drawable/platlogo"
+        android:supportsRtl="true">
 
         <!-- Broadcast receiver that gets the broadcast at boot time and starts
              up everything else.
@@ -127,7 +128,6 @@
                 android:theme="@style/RecentsStyle"
                 android:excludeFromRecents="true"
                 android:launchMode="singleInstance"
-                android:hardwareAccelerated="true" 
                 android:exported="true">
           <intent-filter>
             <action android:name="com.android.systemui.TOGGLE_RECENTS" />
@@ -260,9 +260,5 @@
                 <category android:name="android.intent.category.DESK_DOCK" />
             </intent-filter>
         </activity>
-
-        <activity android:name="com.android.systemui.Transparent"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
     </application>
 </manifest>

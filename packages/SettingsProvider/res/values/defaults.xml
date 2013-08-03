@@ -35,7 +35,7 @@
 
     <bool name="def_bluetooth_on">false</bool>
     <bool name="def_wifi_display_on">false</bool>
-    <bool name="def_install_non_market_apps">true</bool>
+    <bool name="def_install_non_market_apps">false</bool>
     <bool name="def_package_verifier_enable">true</bool>
     <!-- Comma-separated list of location providers.
          Network location is off by default because it requires
@@ -43,9 +43,6 @@
     -->
     <string name="def_location_providers_allowed" translatable="false">gps</string>
     <bool name="assisted_gps_enabled">true</bool>
-    <!--  0 == mobile, 1 == wifi. -->
-    <integer name="def_network_preference">1</integer>
-    <bool name="def_reboot_preference">true</bool>
     <bool name="def_netstats_enabled">true</bool>
     <bool name="def_usb_mass_storage_enabled">true</bool>
     <bool name="def_wifi_on">false</bool>
@@ -78,8 +75,13 @@
     <string name="def_unlock_sound" translatable="false">/system/media/audio/ui/Unlock.ogg</string>
     <string name="def_wireless_charging_started_sound" translatable="false">/system/media/audio/ui/WirelessChargingStarted.ogg</string>
 
+    <bool name="def_power_notifications_enabled">false</bool>
+    <bool name="def_power_notifications_vibrate">false</bool>
+    <string name="def_power_notifications_ringtone" translatable="false">content://settings/system/notification_sound</string>
+
     <bool name="def_lockscreen_disabled">false</bool>
     <bool name="def_device_provisioned">false</bool>
+    <integer name="def_dock_audio_media_enabled">1</integer>
 
     <!-- Notifications use ringer volume -->
     <bool name="def_notifications_use_ring_volume">true</bool>
@@ -155,9 +157,6 @@
 
     <!-- Default for Settings.System.POINTER_SPEED -->
     <integer name="def_pointer_speed">0</integer>
-    <integer name="def_weather_style">1</integer>
-    <integer name="def_weather_hide">1</integer>
-    
 
     <!-- Default for DTMF tones enabled -->
     <bool name="def_dtmf_tones_enabled">true</bool>
@@ -192,5 +191,11 @@
     <integer name="def_qs_quick_pulldown">0</integer>
 
     <!-- Default for Settings.System.LOCKSCREEN_TARGETS. -->
-    <!-- <string name="def_lockscreen_targets" translatable="false"></string> -->
+    <string name="def_lockscreen_targets" translatable="false"></string>
+
+    <!-- Default for Settings.System.UI_FORCE_OVERFLOW_BUTTON. -->
+    <integer name="def_force_overflow_button">0</integer>
+
+    <!-- Default for Settings.Secure.DIALPAD_AUTOCOMPLETE. -->
+    <integer name="def_dialpad_autocomplete">1</integer>
 </resources>

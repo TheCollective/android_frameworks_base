@@ -144,6 +144,20 @@ public final class BatteryStatsService extends IBatteryStats.Stub {
         }
     }
     
+    public void noteVibratorOn(int uid, long durationMillis) {
+        enforceCallingPermission();
+        synchronized (mStats) {
+            mStats.noteVibratorOnLocked(uid, durationMillis);
+        }
+    }
+
+    public void noteVibratorOff(int uid) {
+        enforceCallingPermission();
+        synchronized (mStats) {
+            mStats.noteVibratorOffLocked(uid);
+        }
+    }
+
     public void noteStartGps(int uid) {
         enforceCallingPermission();
         synchronized (mStats) {
@@ -330,6 +344,13 @@ public final class BatteryStatsService extends IBatteryStats.Stub {
         synchronized (mStats) {
             mBluetoothPendingStats = false;
             mStats.noteBluetoothOffLocked();
+            mStats.setBtHeadset(null);
+        }
+
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter != null && mBluetoothHeadset != null) {
+            adapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
+            mBluetoothHeadset = null;
         }
     }
     

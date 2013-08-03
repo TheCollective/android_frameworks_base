@@ -22,9 +22,9 @@ import android.widget.ImageView;
 import com.android.systemui.R;
 import com.android.systemui.statusbar.phone.QuickSettingsController;
 import com.android.systemui.statusbar.phone.QuickSettingsContainerView;
-import com.android.systemui.statusbar.policy.BrightnessController;
-import com.android.systemui.statusbar.policy.BrightnessController.BrightnessStateChangeCallback;
-import com.android.systemui.statusbar.policy.ToggleSlider;
+import com.android.systemui.settings.BrightnessController;
+import com.android.systemui.settings.BrightnessController.BrightnessStateChangeCallback;
+import com.android.systemui.settings.ToggleSlider;
 
 public class BrightnessTile extends QuickSettingsTile implements BrightnessStateChangeCallback {
 
@@ -115,6 +115,14 @@ public class BrightnessTile extends QuickSettingsTile implements BrightnessState
     @Override
     public void updateResources() {
         updateTile();
+        // Dismiss dialog before nullifying it.
+        mDismissBrightnessDialogRunnable.run();
+        mBrightnessDialog = null;
+        super.updateResources();
+    }
+
+    private void updateTileResources() {
+        updateTile();
         super.updateResources();
     }
 
@@ -136,11 +144,11 @@ public class BrightnessTile extends QuickSettingsTile implements BrightnessState
 
     @Override
     public void onBrightnessLevelChanged() {
-        updateResources();
+        updateTileResources();
     }
 
     @Override
     public void onChangeUri(ContentResolver resolver, Uri uri) {
-        updateResources();
+        updateTileResources();
     }
 }

@@ -247,12 +247,6 @@ class WallpaperManagerService extends IWallpaperManager.Stub {
                 mEngine = null;
                 if (mWallpaper.connection == this) {
                     Slog.w(TAG, "Wallpaper service gone: " + mWallpaper.wallpaperComponent);
-                   /* //>hide this section for now? Should futher testing can be done? Looks like it prevents theme wallpaper from being released.
-                    *if (mWallpaper.wallpaperComponent.equals(IMAGE_WALLPAPER)) {
-                    *    Slog.w(TAG, "SystemUI wallpaper disconnected, assuming it's being restarted, not clearing wallpaper.");
-                    *    return;
-                    *}
-                    */
                     if (!mWallpaper.wallpaperUpdating
                             && (mWallpaper.lastDiedTime + MIN_WALLPAPER_CRASH_TIME)
                                 > SystemClock.uptimeMillis()
@@ -897,7 +891,8 @@ class WallpaperManagerService extends IWallpaperManager.Stub {
                     Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER),
                             mContext.getText(com.android.internal.R.string.chooser_wallpaper)),
                     0, null, new UserHandle(serviceUserId)));
-            if (!mContext.bindService(intent, newConn, Context.BIND_AUTO_CREATE, serviceUserId)) {
+            if (!mContext.bindServiceAsUser(intent, newConn, Context.BIND_AUTO_CREATE,
+                    new UserHandle(serviceUserId))) {
                 String msg = "Unable to bind service: "
                         + componentName;
                 if (fromUser) {

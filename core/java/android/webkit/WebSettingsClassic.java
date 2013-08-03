@@ -127,7 +127,6 @@ public class WebSettingsClassic extends WebSettings {
     private boolean         mEnableSmoothTransition = false;
     private boolean         mForceUserScalable = false;
     private boolean         mPasswordEchoEnabled = true;
-    private boolean         mWebGLEnabled = true;
 
     // AutoFill Profile data
     public static class AutoFillProfile {
@@ -435,14 +434,21 @@ public class WebSettingsClassic extends WebSettings {
             buffer.append(" Build/");
             buffer.append(id);
         }
-        final String cmversion = SystemProperties.get("ro.cm.version");
-        if (cmversion != null && cmversion.length() > 0)
-            buffer.append("; CyanogenMod-" + cmversion.replaceAll("([0-9\\.]+?)-.*","$1"));
         String mobile = context.getResources().getText(
             com.android.internal.R.string.web_user_agent_target_content).toString();
         final String base = context.getResources().getText(
                 com.android.internal.R.string.web_user_agent).toString();
-        return String.format(base, buffer, mobile);
+
+        String cmtag = "";
+        final String cmversion = SystemProperties.get("ro.cm.version");
+        if (cmversion != null && cmversion.length() > 0) {
+            cmtag = " CyanogenMod/" + cmversion.replaceAll("([0-9\\.]+?)-.*","$1");
+            final String cmdevice = SystemProperties.get("ro.cm.device");
+            if (cmdevice != null && cmdevice.length() > 0)
+                cmtag = cmtag.concat("/" + cmdevice);
+        }
+
+        return String.format(base, buffer, mobile).concat(cmtag);
     }
 
     /**
@@ -653,10 +659,6 @@ public class WebSettingsClassic extends WebSettings {
     @Override
     public synchronized void setTextZoom(int textZoom) {
         if (mTextSize != textZoom) {
-            if (WebViewClassic.mLogEvent) {
-                EventLog.writeEvent(EventLogTags.BROWSER_TEXT_SIZE_CHANGE,
-                        mTextSize, textZoom);
-            }
             mTextSize = textZoom;
             postSync();
         }
@@ -826,6 +828,10 @@ public class WebSettingsClassic extends WebSettings {
      */
     @Override
     public synchronized void setLayoutAlgorithm(LayoutAlgorithm l) {
+        if (l == LayoutAlgorithm.TEXT_AUTOSIZING) {
+            throw new IllegalArgumentException(
+                    "WebViewClassic does not support TEXT_AUTOSIZING layout mode");
+        }
         // XXX: This will only be affective if libwebcore was built with
         // ANDROID_LAYOUT defined.
         if (mLayoutAlgorithm != l) {
@@ -1259,7 +1265,7 @@ public class WebSettingsClassic extends WebSettings {
     @Override
     public synchronized void setAppCachePath(String path) {
         // We test for a valid path and for repeated setting on the native
-        // side, but we can avoid syncing in some simple cases.
+        // side, but we can avoid syncing in some simple cases. 
         if (mAppCachePath == null && path != null && !path.isEmpty()) {
             mAppCachePath = path;
             postSync();
@@ -1655,25 +1661,6 @@ public class WebSettingsClassic extends WebSettings {
     }
 
     /**
-     * @hide
-     */
-    public synchronized boolean isWebGLAvailable() {
-        return nativeIsWebGLAvailable();
-    }
-
-    /**
-     * Sets whether WebGL is enabled.
-     * @param flag Set to true to enable WebGL.
-     * @hide
-     */
-    public synchronized void setWebGLEnabled(boolean flag) {
-        if (mWebGLEnabled != flag) {
-            mWebGLEnabled = flag;
-            postSync();
-        }
-    }
-
-    /**
      * Sets whether viewport metatag can disable zooming.
      * @param flag Whether or not to forceably enable user scalable.
      */
@@ -1785,5 +1772,4 @@ public class WebSettingsClassic extends WebSettings {
 
     // Synchronize the native and java settings.
     private native void nativeSync(int nativeFrame);
-    private native boolean nativeIsWebGLAvailable();
 }

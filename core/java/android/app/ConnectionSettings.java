@@ -3,13 +3,16 @@ package android.app;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.net.wimax.WimaxHelper;
+import android.nfc.NfcAdapter;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.Settings;
+import com.android.internal.telephony.RILConstants;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -31,6 +34,16 @@ public final class ConnectionSettings implements Parcelable {
     public static final int PROFILE_CONNECTION_GPS = 4;
     public static final int PROFILE_CONNECTION_SYNC = 5;
     public static final int PROFILE_CONNECTION_BLUETOOTH = 7;
+    public static final int PROFILE_CONNECTION_NFC = 8;
+    public static final int PROFILE_CONNECTION_2G3G = 9;
+
+    // retrieved from Phone.apk
+    private static final String ACTION_MODIFY_NETWORK_MODE = "com.android.internal.telephony.MODIFY_NETWORK_MODE";
+    private static final String EXTRA_NETWORK_MODE = "networkMode";
+
+    private static final int CM_MODE_2G = 0;
+    private static final int CM_MODE_3G = 1;
+    private static final int CM_MODE_BOTH = 2;
 
     /** @hide */
     public static final Parcelable.Creator<ConnectionSettings> CREATOR = new Parcelable.Creator<ConnectionSettings>() {
@@ -92,6 +105,12 @@ public final class ConnectionSettings implements Parcelable {
         LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         WifiManager wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NfcAdapter nfcAdapter = null;
+        try {
+            nfcAdapter = NfcAdapter.getNfcAdapter(context);
+        } catch (UnsupportedOperationException e) {
+            //Nfc not available
+        }
 
         boolean forcedState = getValue() == 1;
         boolean currentState;
@@ -103,11 +122,30 @@ public final class ConnectionSettings implements Parcelable {
                     cm.setMobileDataEnabled(forcedState);
                 }
                 break;
+            case PROFILE_CONNECTION_2G3G:
+                Intent intent = new Intent(ACTION_MODIFY_NETWORK_MODE);
+                switch(getValue()) {
+                    case CM_MODE_2G:
+                        intent.putExtra(EXTRA_NETWORK_MODE, RILConstants.NETWORK_MODE_GSM_ONLY);
+                        break;
+                    case CM_MODE_3G:
+                        intent.putExtra(EXTRA_NETWORK_MODE, RILConstants.NETWORK_MODE_WCDMA_ONLY);
+                        break;
+                    case CM_MODE_BOTH:
+                        intent.putExtra(EXTRA_NETWORK_MODE, RILConstants.NETWORK_MODE_WCDMA_PREF);
+                        break;
+                    default:
+                        return;
+                }
+                context.sendBroadcast(intent);
+                break;
             case PROFILE_CONNECTION_BLUETOOTH:
-                currentState = bta.isEnabled();
-                if (forcedState && !currentState) {
+                int btstate = bta.getState();
+                if (forcedState && (btstate == BluetoothAdapter.STATE_OFF
+                        || btstate == BluetoothAdapter.STATE_TURNING_OFF)) {
                     bta.enable();
-                } else if (!forcedState && currentState) {
+                } else if (!forcedState && (btstate == BluetoothAdapter.STATE_ON
+                        || btstate == BluetoothAdapter.STATE_TURNING_ON)) {
                     bta.disable();
                 }
                 break;
@@ -141,7 +179,8 @@ public final class ConnectionSettings implements Parcelable {
                 currentState = wm.isWifiApEnabled();
                 if (currentState != forcedState) {
                     // Disable wifi
-                    if (forcedState && (wifiState == WifiManager.WIFI_STATE_ENABLING) || (wifiState == WifiManager.WIFI_STATE_ENABLED)) {
+                    if (forcedState && (wifiState == WifiManager.WIFI_STATE_ENABLING) ||
+                            (wifiState == WifiManager.WIFI_STATE_ENABLED)) {
                         wm.setWifiEnabled(false);
                     }
                     wm.setWifiApEnabled(null, forcedState);
@@ -152,6 +191,20 @@ public final class ConnectionSettings implements Parcelable {
                     currentState = WimaxHelper.isWimaxEnabled(context);
                     if (currentState != forcedState) {
                         WimaxHelper.setWimaxEnabled(context, forcedState);
+                    }
+                }
+                break;
+            case PROFILE_CONNECTION_NFC:
+                if (nfcAdapter != null) {
+                    int adapterState = nfcAdapter.getAdapterState();
+                    currentState = (adapterState == NfcAdapter.STATE_ON ||
+                            adapterState == NfcAdapter.STATE_TURNING_ON);
+                    if (currentState != forcedState) {
+                        if (forcedState) {
+                            nfcAdapter.enable();
+                        } else if (!forcedState && adapterState != NfcAdapter.STATE_TURNING_OFF) {
+                            nfcAdapter.disable();
+                        }
                     }
                 }
                 break;

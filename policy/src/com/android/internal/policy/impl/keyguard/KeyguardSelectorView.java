@@ -91,7 +91,7 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                 case com.android.internal.R.drawable.ic_action_assist_generic:
                     Intent assistIntent =
                     ((SearchManager) mContext.getSystemService(Context.SEARCH_SERVICE))
-                    .getAssistIntent(mContext, UserHandle.USER_CURRENT);
+                    .getAssistIntent(mContext, true, UserHandle.USER_CURRENT);
                     if (assistIntent != null) {
                         mActivityLauncher.launchActivity(assistIntent, false, true, null, null);
                     } else {
@@ -263,8 +263,7 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                 || secureCameraDisabled;
         final KeyguardUpdateMonitor monitor = KeyguardUpdateMonitor.getInstance(getContext());
         boolean disabledBySimState = monitor.isSimLocked();
-        boolean cameraPresent =
-            isTargetPresent(com.android.internal.R.drawable.ic_lockscreen_camera);
+        boolean cameraPresent = mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA);
         boolean searchTargetPresent =
             isTargetPresent(com.android.internal.R.drawable.ic_action_assist_generic);
 
@@ -280,7 +279,7 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                 currentUserHandle);
         boolean searchActionAvailable =
                 ((SearchManager) mContext.getSystemService(Context.SEARCH_SERVICE))
-                .getAssistIntent(mContext, UserHandle.USER_CURRENT) != null;
+                .getAssistIntent(mContext, false, UserHandle.USER_CURRENT) != null;
         mCameraDisabled = cameraDisabledByAdmin || disabledBySimState || !cameraPresent
                 || !currentUserSetup;
         mSearchDisabled = disabledBySimState || !searchActionAvailable || !searchTargetPresent
@@ -295,7 +294,7 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
             // Update the search icon with drawable from the search .apk
             if (!mSearchDisabled) {
                 Intent intent = ((SearchManager) mContext.getSystemService(Context.SEARCH_SERVICE))
-                        .getAssistIntent(mContext, UserHandle.USER_CURRENT);
+                        .getAssistIntent(mContext, false, UserHandle.USER_CURRENT);
                 if (intent != null) {
                     // XXX Hack. We need to substitute the icon here but haven't formalized
                     // the public API. The "_google" metadata will be going away, so
@@ -317,6 +316,9 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                     .ic_lockscreen_camera, !mCameraDisabled);
             mGlowPadView.setEnableTarget(com.android.internal.R.drawable
                     .ic_action_assist_generic, !mSearchDisabled);
+
+            // Enable magnetic targets
+            mGlowPadView.setMagneticTargets(true);
         } else {
             mStoredTargets = storedVal.split("\\|");
             mIsScreenLarge = isScreenLarge();
@@ -327,6 +329,8 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
             final boolean isLandscape = mCreationOrientation == Configuration.ORIENTATION_LANDSCAPE;
             final Drawable blankActiveDrawable = res.getDrawable(R.drawable.ic_lockscreen_target_activated);
             final InsetDrawable activeBack = new InsetDrawable(blankActiveDrawable, 0, 0, 0, 0);
+            // Disable magnetic target
+            mGlowPadView.setMagneticTargets(false);
             //Magnetic target replacement
             final Drawable blankInActiveDrawable = res.getDrawable(com.android.internal.R.drawable.ic_lockscreen_lock_pressed);
             final Drawable unlockActiveDrawable = res.getDrawable(com.android.internal.R.drawable.ic_lockscreen_unlock_activated);
@@ -395,7 +399,14 @@ public class KeyguardSelectorView extends LinearLayout implements KeyguardSecuri
                             }
                             TargetDrawable nDrawable = new TargetDrawable(res, getLayeredDrawable(back,front, tmpInset, frontBlank));
                             ComponentName compName = in.getComponent();
-                       
+                            if (compName != null) {
+                                String cls = compName.getClassName();
+                                if (cls.equals("com.android.camera.CameraLauncher")) {
+                                    nDrawable.setEnabled(!mCameraDisabled);
+                                } else if (cls.equals("SearchActivity")) {
+                                    nDrawable.setEnabled(!mSearchDisabled);
+                                }
+                            }
                             storedDraw.add(nDrawable);
                         } catch (Exception e) {
                             storedDraw.add(new TargetDrawable(res, 0));

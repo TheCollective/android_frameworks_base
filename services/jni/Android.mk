@@ -16,7 +16,6 @@ LOCAL_SRC_FILES:= \
     com_android_server_VibratorService.cpp \
     com_android_server_location_GpsLocationProvider.cpp \
     com_android_server_connectivity_Vpn.cpp \
-    com_android_server_IrdaManagerService.cpp \
     onload.cpp
 
 LOCAL_C_INCLUDES += \
@@ -33,6 +32,7 @@ LOCAL_SHARED_LIBRARIES := \
     libandroid_runtime \
     libandroidfw \
     libcutils \
+    liblog \
     libhardware \
     libhardware_legacy \
     libnativehelper \

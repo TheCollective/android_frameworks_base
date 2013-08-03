@@ -8,11 +8,13 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ThemeInfo;
 import android.content.res.AssetManager;
 import android.content.res.PackageRedirectionMap;
 import android.content.res.Resources;
+import android.os.Binder;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
@@ -203,6 +205,16 @@ public class AssetRedirectionManagerService extends IAssetRedirectionManager.Stu
     protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         synchronized (mRedirections) {
             final ArrayList<RedirectionKey> filteredKeySet = new ArrayList<RedirectionKey>();
+
+            if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                pw.println("Permission Denial: can't dump assetredirectionservice from from pid="
+                        + Binder.getCallingPid()
+                        + ", uid=" + Binder.getCallingUid());
+                return;
+            }
+
             for (Map.Entry<RedirectionKey, PackageRedirectionMap> entry: mRedirections.entrySet()) {
                 PackageRedirectionMap map = entry.getValue();
                 if (map != null && map.getPackageId() != -1) {
@@ -363,14 +375,37 @@ public class AssetRedirectionManagerService extends IAssetRedirectionManager.Stu
             }
         }
 
+        /* Limit themeability to well-known visual resource types. Strings, booleans, integers,
+           and other resource types are very likely to be internal to applications or the system,
+           and should not be overridden */
+
+        private boolean checkAllowedResType(String name) {
+            String allowedResourceTypes[] = { "color", "dimen", "drawable", "mipmap", "style" };
+
+            for (String resType : allowedResourceTypes) {
+                if (name.startsWith(resType)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private void processItemTag() throws XmlPullParserException, IOException {
             XmlPullParser parser = mParser;
             String fromName = parser.getAttributeValue(null, "name");
+
             if (TextUtils.isEmpty(fromName)) {
                 Log.w(TAG, "Missing android:name attribute on <item> tag at " + getResourceLabel() + " " +
                         parser.getPositionDescription());
                 return;
             }
+
+            if (!checkAllowedResType(fromName)) {
+                Log.w(TAG, "Attempting to redirect unauthorized resource " + fromName + " at " + getResourceLabel() + " " +
+                        parser.getPositionDescription());
+                return;
+            }
+
             String toName = parser.nextText();
             if (TextUtils.isEmpty(toName)) {
                 Log.w(TAG, "Missing <item> text at " + getResourceLabel() + " " +

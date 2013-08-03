@@ -1,3 +1,4 @@
+
 package android.net.wifi;
 
 import android.os.Parcel;
@@ -82,4 +83,3 @@ public class WifiChannel implements Parcelable {
                 }
             };
 }
-

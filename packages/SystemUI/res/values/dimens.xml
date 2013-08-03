@@ -99,31 +99,31 @@
 
     <!-- Notification drawer tuning parameters (phone UI) -->
     <!-- Initial velocity of the shade when expanding on its own -->
-    <dimen name="self_expand_velocity">3000dp</dimen>
+    <dimen name="self_expand_velocity">2000dp</dimen>
     <!-- Initial velocity of the shade when collapsing on its own -->
-    <dimen name="self_collapse_velocity">3000dp</dimen>
+    <dimen name="self_collapse_velocity">2000dp</dimen>
     <!-- Minimum final velocity of gestures interpreted as expand requests -->
     <dimen name="fling_expand_min_velocity">100dp</dimen>
     <!-- Minimum final velocity of gestures interpreted as collapse requests -->
     <dimen name="fling_collapse_min_velocity">100dp</dimen>
     <!-- Cap on contribution of x dimension of gesture to overall velocity -->
-    <dimen name="fling_gesture_max_x_velocity">300dp</dimen>
+    <dimen name="fling_gesture_max_x_velocity">200dp</dimen>
     <!-- Cap on overall resulting fling speed (s^-1) -->
-    <dimen name="fling_gesture_max_output_velocity">4000dp</dimen>
+    <dimen name="fling_gesture_max_output_velocity">3000dp</dimen>
 
     <!-- Minimum distance a fling must travel (anti-jitter) -->
-    <dimen name="fling_gesture_min_dist">30dp</dimen>
+    <dimen name="fling_gesture_min_dist">20dp</dimen>
 
     <!-- Minimum fraction of the display a gesture must travel, at any velocity, to qualify as a
          collapse request -->
-    <item type="dimen" name="collapse_min_display_fraction">15%</item>
+    <item type="dimen" name="collapse_min_display_fraction">10%</item>
     <!-- Minimum fraction of the display a gesture must travel to qualify as an expand request -->
     <item type="dimen" name="expand_min_display_fraction">50%</item>
 
     <!-- Initial acceleration of an expand animation after fling -->
-    <dimen name="expand_accel">2500dp</dimen>
+    <dimen name="expand_accel">2000dp</dimen>
     <!-- Initial acceleration of an collapse animation after fling -->
-    <dimen name="collapse_accel">2500dp</dimen>
+    <dimen name="collapse_accel">2000dp</dimen>
 
     <!-- The padding on the global screenshot background image -->
     <dimen name="global_screenshot_bg_padding">20dp</dimen>
@@ -204,9 +204,6 @@
     <item type="dimen" name="notification_panel_min_height_frac">0%</item>
 
     <dimen name="blinds_pop_threshold">32dp</dimen>
-    
-    <!-- Height of carrier label + close handle -->
-    <dimen name="weather_text_margin">56dp</dimen>
 
     <!-- The size of the gesture span needed to activate the "pull" notification expansion -->
     <dimen name="pull_span_min">25dp</dimen>
@@ -215,39 +212,36 @@
     <!-- For phones, this is close_handle_height + header_height -->
     <dimen name="peek_height">84dp</dimen>
 
+    <!-- Quick Settings tile geometry: top interior margin, above icon -->
+    <dimen name="qs_tile_margin_above_icon">27dp</dimen>
+    <!-- Quick Settings tile geometry: gap between icon and text -->
+    <dimen name="qs_tile_margin_below_icon">17dp</dimen>
+    <!-- Quick Settings tile geometry: icon size -->
+    <dimen name="qs_tile_icon_size">32dp</dimen>
+
     <!-- The padding of the items of the battery cluster -->
     <dimen name="status_bar_battery_cluster_padding">2dip</dimen>
     <!-- The margin adjusment of the text items of the battery cluster -->
     <dimen name="status_bar_battery_cluster_text_margin">-1dip</dimen>
-    <!-- PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE -->
-    <dimen name="pie_trigger_height">12dp</dimen>
 
-    <dimen name="pie_radius_start">65dp</dimen>
-    <dimen name="pie_radius_increment">80dp</dimen>
-    <dimen name="pie_outline">1.5dp</dimen>
-    <dimen name="pie_chevron_start">240dp</dimen>
-    <dimen name="pie_chevron_start_right">240dp</dimen>
-    <dimen name="pie_chevron_increment">2dp</dimen>
-    <dimen name="pie_chevron_increment_right">2dp</dimen>
-    <dimen name="pie_battery_start">155dp</dimen>
-    <dimen name="pie_battery_increment">10dp</dimen>
-    <dimen name="pie_status_start">155dp</dimen>
-    <dimen name="pie_notifications_start">250dp</dimen>
-    <dimen name="pie_clock_size">58dp</dimen>
-    <dimen name="pie_clock_offset">-20dp</dimen>
-    <dimen name="pie_ampm_size">15dp</dimen>
-    <dimen name="pie_ampm_offset">-67dp</dimen>
-    <dimen name="pie_status_size">12dp</dimen>
-    <dimen name="pie_status_offset">-14dp</dimen>
-    <dimen name="pie_notification_size">13dp</dimen>
-    <dimen name="pie_notification_row_size">16dp</dimen>
-    <dimen name="pie_notification_icon_size">15dp</dimen>
+    <!-- ==================== pie controls ==================== -->
+    <!-- Padding between the pie controls and the screen border -->
+    <dimen name="pie_padding">16dp</dimen>
+
+    <!-- Radius of the snap points a the border of the screen -->
     <dimen name="pie_snap_radius">30dp</dimen>
-    <dimen name="pie_snap_thickness">6dp</dimen>
-    <dimen name="pie_touch_offset">15dp</dimen>
-    <dimen name="pie_tab_title_height">24dp</dimen>
-    <dimen name="pie_item_size">40dp</dimen>
-    <dimen name="pie_panel_padding">20dp</dimen>
+    <!-- Stroke width of the snap points -->
+    <dimen name="pie_snap_outline">4dp</dimen>
 
-    <dimen name="halo_content_max_width">250dp</dimen>
+    <dimen name="pie_outline">2dp</dimen>
+    <!-- Text size of "normal" / small text on the pie control -->
+    <dimen name="pie_textsize">12sp</dimen>
+    <!-- Minimum size of imageviews placed within pie items -->
+    <dimen name="pie_item_size">30dp</dimen>
+
+    <dimen name="pie_navbar_radius">70dp</dimen>
+    <dimen name="pie_navbar_height">85dp</dimen>
+
+    <dimen name="pie_sysinfo_radius">165dp</dimen>
+    <dimen name="pie_sysinfo_height">85sp</dimen>
 </resources>

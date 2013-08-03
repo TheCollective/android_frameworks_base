@@ -26,13 +26,8 @@
     android:layout_height="wrap_content"
     android:background="@drawable/notification_panel_bg"
     android:paddingTop="@dimen/notification_panel_padding_top"
-    android:layout_marginLeft="@dimen/notification_panel_margin_left"
+    android:layout_marginStart="@dimen/notification_panel_margin_left"
     >
-
-    <com.android.systemui.statusbar.phone.NotificationWallpaper
-        android:id="@+id/notification_wallpaper"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
     <View
         android:id="@+id/handle"
@@ -70,22 +65,6 @@
             android:layout_marginTop="2dip"
             android:visibility="gone"
         />
-	
-	<com.android.systemui.statusbar.policy.WeatherText
-        android:id="@+id/weather"
-        android:textAppearance="@style/TextAppearance.StatusBar.Expanded.Network"
-        android:layout_height="@dimen/carrier_label_height"
-        android:layout_width="match_parent"
-        android:layout_gravity="bottom"
-        android:layout_marginBottom="@dimen/weather_text_margin"
-        android:gravity="center"
-        android:visibility="invisible"
-        />
-	
-	<include
-	        layout="@layout/weatherpanel"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content" />
 
         <TextView
             android:id="@+id/emergency_calls_only"

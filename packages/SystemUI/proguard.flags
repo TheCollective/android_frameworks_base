@@ -1,10 +1,3 @@
--keep class com.android.systemui.statusbar.tablet.TabletStatusBarService {
-  public void notificationIconsClicked(android.view.View);
-  public void systemInfoClicked(android.view.View);
-  public void recentButtonClicked(android.view.View);
-  public void toggleLightsOut(android.view.View);
-}
-
 -keep class com.android.systemui.statusbar.policy.KeyButtonView {
   public float getDrawingAlpha();
   public float getGlowAlpha();
@@ -14,16 +7,4 @@
   public void setGlowScale(float);
 }
 
--keep class com.android.systemui.statusbar.halo.HaloProperties {
-  public int getHaloX();
-  public int getHaloY();
-  public float getHaloContentAlpha();
-  public void setHaloX(int);
-  public void setHaloY(int);
-  public void setHaloContentAlpha(float);
-}
-
 -keep class com.android.systemui.statusbar.tv.TvStatusBar
--keep class com.android.systemui.quicksettings.* {
-  public static *;
-}

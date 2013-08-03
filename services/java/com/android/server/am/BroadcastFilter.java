@@ -73,7 +73,7 @@ class BroadcastFilter extends IntentFilter {
         sb.append('}');
         return sb.toString();
     }
-   
+
     @Override
     public int onCompareTie(IntentFilter other) {
         // in case of a tie when sorting ordered broadcasts,

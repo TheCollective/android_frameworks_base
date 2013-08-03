@@ -155,6 +155,7 @@ public class KeyguardViewMediator {
     private StatusBarManager mStatusBarManager;
     private boolean mShowLockIcon;
     private boolean mShowingLockIcon;
+    private boolean mSwitchingUser;
 
     private boolean mSystemReady;
 
@@ -259,6 +260,11 @@ public class KeyguardViewMediator {
     private final float mLockSoundVolume;
 
     /**
+     * Cache of avatar drawables, for use by KeyguardMultiUserAvatar.
+     */
+    private static MultiUserAvatarCache sMultiUserAvatarCache = new MultiUserAvatarCache();
+
+    /**
      * The callback used by the keyguard view to tell the {@link KeyguardViewMediator}
      * various things.
      */
@@ -316,21 +322,34 @@ public class KeyguardViewMediator {
     KeyguardUpdateMonitorCallback mUpdateCallback = new KeyguardUpdateMonitorCallback() {
 
         @Override
-        public void onUserSwitched(int userId) {
+        public void onUserSwitching(int userId) {
             // Note that the mLockPatternUtils user has already been updated from setCurrentUser.
             // We need to force a reset of the views, since lockNow (called by
             // ActivityManagerService) will not reconstruct the keyguard if it is already showing.
             synchronized (KeyguardViewMediator.this) {
+                mSwitchingUser = true;
                 resetStateLocked(null);
                 adjustStatusBarLocked();
-                // Disable face unlock when the user switches.
-                KeyguardUpdateMonitor.getInstance(mContext).setAlternateUnlockEnabled(false);
+                // When we switch users we want to bring the new user to the biometric unlock even
+                // if the current user has gone to the backup.
+                KeyguardUpdateMonitor.getInstance(mContext).setAlternateUnlockEnabled(true);
             }
+        }
+
+        @Override
+        public void onUserSwitchComplete(int userId) {
+            mSwitchingUser = false;
         }
 
         @Override
         public void onUserRemoved(int userId) {
             mLockPatternUtils.removeUser(userId);
+            sMultiUserAvatarCache.clear(userId);
+        }
+
+        @Override
+        public void onUserInfoChanged(int userId) {
+            sMultiUserAvatarCache.clear(userId);
         }
 
         @Override
@@ -696,13 +715,28 @@ public class KeyguardViewMediator {
     }
 
     private void maybeSendUserPresentBroadcast() {
-        if (mSystemReady && mLockPatternUtils.isLockScreenDisabled()
-                && mUserManager.getUsers(true).size() == 1) {
-            // Lock screen is disabled because the user has set the preference to "None".
-            // In this case, send out ACTION_USER_PRESENT here instead of in
-            // handleKeyguardDone()
+        if (mSystemReady && isKeyguardDisabled()) {
             sendUserPresentBroadcast();
         }
+    }
+
+    private boolean isKeyguardDisabled() {
+        if (!mExternallyEnabled) {
+            if (DEBUG) Log.d(TAG, "isKeyguardDisabled: keyguard is disabled externally");
+            return true;
+        }
+        if (mLockPatternUtils.isLockScreenDisabled() && mUserManager.getUsers(true).size() == 1) {
+            if (DEBUG) Log.d(TAG, "isKeyguardDisabled: keyguard is disabled by setting");
+            return true;
+        }
+        Profile profile = mProfileManager.getActiveProfile();
+        if (profile != null) {
+            if (profile.getScreenLockModeWithDPM(mContext) == Profile.LockMode.DISABLE) {
+                if (DEBUG) Log.d(TAG, "isKeyguardDisabled: keyguard is disabled by profile");
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -861,11 +895,10 @@ public class KeyguardViewMediator {
 
     /**
      * Given the state of the keyguard, is the input restricted?
-     * Input is restricted when the keyguard is showing, or when the keyguard
-     * was suppressed by an app that disabled the keyguard or we haven't been provisioned yet.
+     * Input is restricted when the keyguard is showing or we haven't been provisioned yet.
      */
     public boolean isInputRestricted() {
-        return mShowing || mNeedToReshowWhenReenabled || !mUpdateMonitor.isDeviceProvisioned();
+        return mShowing || !mUpdateMonitor.isDeviceProvisioned();
     }
 
     private void doKeyguardLocked() {
@@ -898,36 +931,10 @@ public class KeyguardViewMediator {
             return;
         }
 
-        // if another app is disabling us, don't show
-        if (!mExternallyEnabled && !lockedOrMissing) {
-            if (DEBUG) Log.d(TAG, "doKeyguard: not showing because externally disabled");
-
-            // note: we *should* set mNeedToReshowWhenReenabled=true here, but that makes
-            // for an occasional ugly flicker in this situation:
-            // 1) receive a call with the screen on (no keyguard) or make a call
-            // 2) screen times out
-            // 3) user hits key to turn screen back on
-            // instead, we reenable the keyguard when we know the screen is off and the call
-            // ends (see the broadcast receiver below)
-            // TODO: clean this up when we have better support at the window manager level
-            // for apps that wish to be on top of the keyguard
+        // if we're disabled by an app or profile, don't show
+        if (!lockedOrMissing && isKeyguardDisabled()) {
+            if (DEBUG) Log.d(TAG, "doKeyguard: not showing because keyguard is disabled");
             return;
-        }
-
-        if (mUserManager.getUsers(true).size() < 2
-                && mLockPatternUtils.isLockScreenDisabled() && !lockedOrMissing) {
-            if (DEBUG) Log.d(TAG, "doKeyguard: not showing because lockscreen is off");
-            return;
-        }
-
-        // if the current profile has disabled us, don't show
-        Profile profile = mProfileManager.getActiveProfile();
-        if (profile != null) {
-            if (!lockedOrMissing
-                    && profile.getScreenLockModeWithDPM(mContext) == Profile.LockMode.DISABLE) {
-                if (DEBUG) Log.d(TAG, "doKeyguard: not showing because of profile override");
-                return;
-            }
         }
 
         if (DEBUG) Log.d(TAG, "doKeyguard: showing the lock screen");
@@ -949,7 +956,7 @@ public class KeyguardViewMediator {
      * @see #handleReset()
      */
     private void resetStateLocked(Bundle options) {
-        if (DEBUG) Log.d(TAG, "resetStateLocked");
+        if (DEBUG) Log.e(TAG, "resetStateLocked");
         Message msg = mHandler.obtainMessage(RESET, options);
         mHandler.sendMessage(msg);
     }
@@ -1402,6 +1409,10 @@ public class KeyguardViewMediator {
      * @see #RESET
      */
     private void handleReset(Bundle options) {
+        if (options == null) {
+            options = new Bundle();
+        }
+        options.putBoolean(KeyguardViewManager.IS_SWITCHING_USER, mSwitchingUser);
         synchronized (KeyguardViewMediator.this) {
             if (DEBUG) Log.d(TAG, "handleReset");
             mKeyguardViewManager.reset(options);
@@ -1458,6 +1469,10 @@ public class KeyguardViewMediator {
 
     private boolean isAssistantAvailable() {
         return mSearchManager != null
-                && mSearchManager.getAssistIntent(mContext, UserHandle.USER_CURRENT) != null;
+                && mSearchManager.getAssistIntent(mContext, false, UserHandle.USER_CURRENT) != null;
+    }
+
+    public static MultiUserAvatarCache getAvatarCache() {
+        return sMultiUserAvatarCache;
     }
 }
