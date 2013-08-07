@@ -1586,6 +1586,13 @@
         android:label="@string/permlab_anyCodecForPlayback"
         android:description="@string/permdesc_anyCodecForPlayback" />
 
+    <!-- Allows an application to access Superuser binary 
+         @hide -->
+    <permission android:name="android.permission.ACCESS_SUPERUSER"
+        android:protectionLevel="normal"
+        android:label="@string/permlab_accessSuperuser"
+        android:description="@string/permdesc_accessSuperuser" />
+
     <!-- ========================================= -->
     <!-- Permissions for special development tools -->
     <!-- ========================================= -->
