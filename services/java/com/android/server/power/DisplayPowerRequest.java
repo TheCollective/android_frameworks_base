@@ -67,6 +67,10 @@ final class DisplayPowerRequest {
     // potentially higher CPU usage and flicker.
     public float responsitivityFactor;
 
+    // AoCP settings - override config for ElectronBeam on or off
+    public int electronBeamMode;
+    public boolean electronBeamOffEnabled;
+
     public DisplayPowerRequest() {
         screenState = SCREEN_STATE_BRIGHT;
         useProximitySensor = false;
@@ -75,6 +79,8 @@ final class DisplayPowerRequest {
         useAutoBrightness = false;
         blockScreenOn = false;
         responsitivityFactor = 1.0f;
+        electronBeamMode = 0;
+        electronBeamOffEnabled = false;
     }
 
     public DisplayPowerRequest(DisplayPowerRequest other) {
@@ -89,6 +95,12 @@ final class DisplayPowerRequest {
         useAutoBrightness = other.useAutoBrightness;
         blockScreenOn = other.blockScreenOn;
         responsitivityFactor = other.responsitivityFactor;
+        electronBeamMode = other.electronBeamMode;
+        electronBeamOffEnabled = other.electronBeamOffEnabled;
+    }
+
+    public int getElectronBeamMode() {
+        return electronBeamMode;
     }
 
     @Override
@@ -105,7 +117,9 @@ final class DisplayPowerRequest {
                 && screenAutoBrightnessAdjustment == other.screenAutoBrightnessAdjustment
                 && useAutoBrightness == other.useAutoBrightness
                 && blockScreenOn == other.blockScreenOn
-                && Math.abs(responsitivityFactor - other.responsitivityFactor) < 1E-6;
+                && Math.abs(responsitivityFactor - other.responsitivityFactor) < 1E-6
+                && electronBeamMode == other.electronBeamMode
+                && electronBeamOffEnabled == other.electronBeamOffEnabled;
     }
 
     @Override
@@ -121,6 +135,8 @@ final class DisplayPowerRequest {
                 + ", screenAutoBrightnessAdjustment=" + screenAutoBrightnessAdjustment
                 + ", useAutoBrightness=" + useAutoBrightness
                 + ", blockScreenOn=" + blockScreenOn
-                + ", responsitivityFactor=" + responsitivityFactor;
+                + ", responsitivityFactor=" + responsitivityFactor
+                + ", electronBeamMode=" + electronBeamMode
+                + ", electronBeamOffEnabled=" + electronBeamOffEnabled;
     }
 }
