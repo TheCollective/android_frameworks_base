@@ -150,15 +150,12 @@ public final class ShutdownThread extends Thread {
                 sConfirmDialog = null;
             }
             if (mReboot && !mRebootSafeMode) {
-                // Determine if primary user is logged in
-                boolean isPrimary = UserHandle.getCallingUserId() == UserHandle.USER_OWNER;
-
-                // See if the advanced reboot menu is enabled (only if primary user) and check the keyguard state
-                boolean advancedReboot = isPrimary ? advancedRebootEnabled(context) : false;
+                int advancedReboot = Settings.Secure.getInt(context.getContentResolver(),
+                        Settings.Secure.ADVANCED_REBOOT, 1);
                 KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-                boolean locked = km.inKeyguardRestrictedInputMode() && km.isKeyguardSecure();
+                boolean locked = km.inKeyguardRestrictedInputMode();
 
-                if (advancedReboot && !locked) {
+                if ((advancedReboot == 1 && !locked) || advancedReboot == 2) {
                     // Include options in power menu for rebooting into recovery or bootloader
                     sConfirmDialog = new AlertDialog.Builder(context)
                             .setTitle(titleResourceId)
@@ -219,10 +216,6 @@ public final class ShutdownThread extends Thread {
         } else {
             beginShutdownSequence(context);
         }
-    }
-
-    private static boolean advancedRebootEnabled(Context context) {
-        return Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.ADVANCED_REBOOT, 0) == 1;
     }
 
     private static class CloseDialogReceiver extends BroadcastReceiver

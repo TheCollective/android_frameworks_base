@@ -3200,17 +3200,45 @@ public final class Settings {
          /**
           * Action to perform when the home key is long-pressed. (Default is 2)
           * 0 - Nothing
-          * 1 - Menu
-          * 2 - App-switch
-          * 3 - Search
-          * 4 - Voice search
-          * 5 - In-app search
+          * 1 - Home
+          * 2 - Back
+          * 3 - Menu
+          * 4 - App-switch
+          * 5 - Search
+          * 6 - Voice Search
+          * 7 - In-App Search
+          * 8 - Power Off
+          * 9 - Kill App
+          * 10 - Last App
+          * 11 - Custom App
+          * @hide
+          */
+
+         public static final String KEY_HOME_ACTION = "key_home_action";
+
+         /**
+          * Action to perform when the home key is long pressed. (Default is 4)
+          * (See KEY_HOME_LONG_PRESS_ACTION for valid values)
           * @hide
           */
          public static final String KEY_HOME_LONG_PRESS_ACTION = "key_home_long_press_action";
 
          /**
-          * Action to perform when the menu key is pressed. (Default is 1)
+          * Action to perform when the back key is pressed. (Default is 2)
+          * (See KEY_HOME_LONG_PRESS_ACTION for valid values)
+          * @hide
+          */
+         public static final String KEY_BACK_ACTION = "key_back_action";
+
+         /**
+          * Action to perform when the back key is long-pressed. (Default is 8)
+          * (See KEY_HOME_LONG_PRESS_ACTION for valid values)
+          * @hide
+          */
+         public static final String KEY_BACK_LONG_PRESS_ACTION = "key_back_long_press_action";
+
+         /**
+          * Action to perform when the menu key is pressed. (Default is 3)
           * (See KEY_HOME_LONG_PRESS_ACTION for valid values)
           * @hide
           */
