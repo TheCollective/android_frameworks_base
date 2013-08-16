@@ -353,7 +353,7 @@ public final class PowerManager {
      * @hide
      */
     public static boolean useScreenAutoBrightnessAdjustmentFeature() {
-        return SystemProperties.getBoolean("persist.power.useautobrightadj", false);
+        return true;
     }
 
     /**
@@ -362,7 +362,7 @@ public final class PowerManager {
      * @hide
      */
     public static boolean useTwilightAdjustmentFeature() {
-        return SystemProperties.getBoolean("persist.power.usetwilightadj", false);
+        return true;
     }
 
     /**
