@@ -64,6 +64,7 @@ public class AppSidebar extends FrameLayout {
     private LayoutParams mInfoBubbleParams;
     private int mSortType = SORT_TYPE_AZ;
     private float mBarAlpha = 1f;
+    private float mBarSizeScale = 1f;
 
     private IUsageStats mUsageStatsService;
     private Context mContext;
@@ -85,10 +86,9 @@ public class AppSidebar extends FrameLayout {
         super(context, attrs, defStyle);
         mTriggerWidth = context.getResources().getDimensionPixelSize(R.dimen.config_app_sidebar_trigger_width);
         mContext = context;
-        setDrawingCacheEnabled(false);
         mLaunchCountComparator = new LaunchCountComparator();
-        mAscendingComparator = new AscendingComparator(context.getPackageManager());
-        mDescendingComparator = new DescendingComparator(context.getPackageManager());
+        mAscendingComparator = new AscendingComparator();
+        mDescendingComparator = new DescendingComparator();
     }
 
     @Override
@@ -171,9 +171,9 @@ public class AppSidebar extends FrameLayout {
         for (ImageView i : mInstalledPackages) {
             ai = (AppInfo)i.getTag();
             try {
-                if (ai.mInfo != null)
-                    ai.mStats = mUsageStatsService.getPkgUsageStats(new ComponentName(ai.mInfo.packageName,
-                            ai.mInfo.name));
+                if (ai.mPackageName != null && ai.mClassName != null)
+                    ai.mStats = mUsageStatsService.getPkgUsageStats(new ComponentName(ai.mPackageName,
+                            ai.mClassName));
             } catch (RemoteException e) {
                 ai.mStats = null;
             }
@@ -320,9 +320,11 @@ public class AppSidebar extends FrameLayout {
                 for (int i = 0; i < apps.size(); i++) {
                     ri = apps.get(i);
                     AppInfo ai = new AppInfo();
-                    ai.mInfo = ri.activityInfo;
+                    ai.mClassName = ri.activityInfo.name;
+                    ai.mPackageName = ri.activityInfo.packageName;
+                    ai.mLabel = ri.activityInfo.loadLabel(pm).toString();
                     ImageView iv = new ImageView(getContext());
-                    iv.setImageDrawable(ai.mInfo.loadIcon(pm));
+                    iv.setImageDrawable(ri.activityInfo.loadIcon(pm));
                     iv.setTag(ai);
                     mInstalledPackages.add(iv);
                 }
@@ -358,11 +360,16 @@ public class AppSidebar extends FrameLayout {
         // set the layout height based on the item height we would like and the
         // number of items that would fit at on screen at once given the height
         // of the app sidebar
-        int desiredHeight = mContext.getResources().getDimensionPixelSize(R.dimen.app_sidebar_item_height);
+        int padding = mContext.getResources().getDimensionPixelSize(R.dimen.app_sidebar_item_padding);
+        int desiredHeight = (int)(mBarSizeScale * mContext.getResources().
+                getDimensionPixelSize(R.dimen.app_sidebar_item_size)) +
+                padding * 2;
         int numItems = (int)Math.floor(getHeight() / desiredHeight);
         ITEM_LAYOUT_PARAMS.height = getHeight() / numItems;
+        ITEM_LAYOUT_PARAMS.width = desiredHeight;
 
         for (ImageView icon : mInstalledPackages) {
+            icon.setPadding(0, padding, 0, padding);
             mAppContainer.addView(icon, ITEM_LAYOUT_PARAMS);
             icon.setOnClickListener(mItemClickedListener);
             icon.setOnTouchListener(mItemTouchedListener);
@@ -386,7 +393,7 @@ public class AppSidebar extends FrameLayout {
 
     private void launchApplication(AppInfo ai) {
         PackageManager pm = mContext.getPackageManager();
-        Intent intent = pm.getLaunchIntentForPackage(ai.mInfo.packageName);
+        Intent intent = pm.getLaunchIntentForPackage(ai.mPackageName);
         mContext.startActivity(intent);
         showAppContainer(false);
     }
@@ -411,7 +418,7 @@ public class AppSidebar extends FrameLayout {
                 case MotionEvent.ACTION_DOWN:
                     AppInfo ai = (AppInfo)view.getTag();
                     mInfoBubble.bringToFront();
-                    mInfoBubble.setText(ai.mInfo.loadLabel(mContext.getPackageManager()));
+                    mInfoBubble.setText(ai.mLabel);
                     mSelectedItem = view;
                     positionInfoBubble(view, mScrollView.getScrollY());
                     showInfoBubble(true);
@@ -424,7 +431,6 @@ public class AppSidebar extends FrameLayout {
     private void positionInfoBubble(View v, int scrollOffset) {
         int marginTop = v.getTop() + v.getHeight()/2
                 - mInfoBubble.getHeight()/2 - scrollOffset;
-        Log.i(TAG, "positionInfoBubble: scrollOffset=" + scrollOffset + " marginTop=" + marginTop);
         mInfoBubbleParams.setMargins(mScrollView.getWidth(), marginTop, 0, 0);
         mInfoBubble.setLayoutParams(mInfoBubbleParams);
     }
@@ -490,6 +496,8 @@ public class AppSidebar extends FrameLayout {
                     Settings.System.APP_SIDEBAR_SORT_TYPE), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.APP_SIDEBAR_TRANSPARENCY), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.APP_SIDEBAR_ITEM_SIZE), false, this);
             update();
         }
 
@@ -530,11 +538,20 @@ public class AppSidebar extends FrameLayout {
                     mScrollView.setAlpha(barAlpha);
                 mBarAlpha = barAlpha;
             }
+
+            float size = (float)Settings.System.getInt(resolver,
+                    Settings.System.APP_SIDEBAR_ITEM_SIZE, 100) / 100f;
+            if (mBarSizeScale != size) {
+                mBarSizeScale = size;
+                layoutItems();
+            }
         }
     }
 
     private class AppInfo {
-        ActivityInfo mInfo;
+        String mLabel;
+        String mPackageName;
+        String mClassName;
         PkgUsageStats mStats;
     }
 
@@ -550,25 +567,17 @@ public class AppSidebar extends FrameLayout {
     }
 
     public static class AscendingComparator implements Comparator<ImageView> {
-        PackageManager mPm;
-        AscendingComparator(PackageManager pm) {
-            mPm = pm;
-        }
         public final int compare(ImageView a, ImageView b) {
-            String alabel = ((AppInfo)a.getTag()).mInfo.loadLabel(mPm).toString();
-            String blabel = ((AppInfo)b.getTag()).mInfo.loadLabel(mPm).toString();
+            String alabel = ((AppInfo)a.getTag()).mLabel;
+            String blabel = ((AppInfo)b.getTag()).mLabel;
             return alabel.compareTo(blabel);
         }
     }
 
     public static class DescendingComparator implements Comparator<ImageView> {
-        PackageManager mPm;
-        DescendingComparator(PackageManager pm) {
-            mPm = pm;
-        }
         public final int compare(ImageView a, ImageView b) {
-            String alabel = ((AppInfo)a.getTag()).mInfo.loadLabel(mPm).toString();
-            String blabel = ((AppInfo)b.getTag()).mInfo.loadLabel(mPm).toString();
+            String alabel = ((AppInfo)a.getTag()).mLabel;
+            String blabel = ((AppInfo)b.getTag()).mLabel;
             return blabel.compareTo(alabel);
         }
     }
