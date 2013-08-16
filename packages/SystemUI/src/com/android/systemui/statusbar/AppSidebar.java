@@ -15,7 +15,6 @@ import android.os.Handler;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.provider.Settings;
-import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.*;
@@ -65,10 +64,7 @@ public class AppSidebar extends FrameLayout {
     private LayoutParams mInfoBubbleParams;
     private int mSortType = SORT_TYPE_AZ;
     private float mBarAlpha = 1f;
-    private float mBarSizeScale = 1f;
-    private boolean mFirstTouch = false;
 
-    private List<String> mExcludedList;
     private IUsageStats mUsageStatsService;
     private Context mContext;
     private SettingsObserver mSettingsObserver;
@@ -89,9 +85,10 @@ public class AppSidebar extends FrameLayout {
         super(context, attrs, defStyle);
         mTriggerWidth = context.getResources().getDimensionPixelSize(R.dimen.config_app_sidebar_trigger_width);
         mContext = context;
+        setDrawingCacheEnabled(false);
         mLaunchCountComparator = new LaunchCountComparator();
-        mAscendingComparator = new AscendingComparator();
-        mDescendingComparator = new DescendingComparator();
+        mAscendingComparator = new AscendingComparator(context.getPackageManager());
+        mDescendingComparator = new DescendingComparator(context.getPackageManager());
     }
 
     @Override
@@ -135,8 +132,6 @@ public class AppSidebar extends FrameLayout {
                 if (ev.getX() <= mTriggerWidth && mState == SIDEBAR_STATE.CLOSED) {
                     showAppContainer(true);
                     cancelAutoHideTimer();
-                    mScrollView.onTouchEvent(ev);
-                    mFirstTouch = true;
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -176,9 +171,9 @@ public class AppSidebar extends FrameLayout {
         for (ImageView i : mInstalledPackages) {
             ai = (AppInfo)i.getTag();
             try {
-                if (ai.mPackageName != null && ai.mClassName != null)
-                    ai.mStats = mUsageStatsService.getPkgUsageStats(new ComponentName(ai.mPackageName,
-                            ai.mClassName));
+                if (ai.mInfo != null)
+                    ai.mStats = mUsageStatsService.getPkgUsageStats(new ComponentName(ai.mInfo.packageName,
+                            ai.mInfo.name));
             } catch (RemoteException e) {
                 ai.mStats = null;
             }
@@ -325,11 +320,9 @@ public class AppSidebar extends FrameLayout {
                 for (int i = 0; i < apps.size(); i++) {
                     ri = apps.get(i);
                     AppInfo ai = new AppInfo();
-                    ai.mClassName = ri.activityInfo.name;
-                    ai.mPackageName = ri.activityInfo.packageName;
-                    ai.mLabel = ri.activityInfo.loadLabel(pm).toString();
+                    ai.mInfo = ri.activityInfo;
                     ImageView iv = new ImageView(getContext());
-                    iv.setImageDrawable(ri.activityInfo.loadIcon(pm));
+                    iv.setImageDrawable(ai.mInfo.loadIcon(pm));
                     iv.setTag(ai);
                     mInstalledPackages.add(iv);
                 }
@@ -365,24 +358,15 @@ public class AppSidebar extends FrameLayout {
         // set the layout height based on the item height we would like and the
         // number of items that would fit at on screen at once given the height
         // of the app sidebar
-        int padding = mContext.getResources().getDimensionPixelSize(R.dimen.app_sidebar_item_padding);
-        int desiredHeight = (int)(mBarSizeScale * mContext.getResources().
-                getDimensionPixelSize(R.dimen.app_sidebar_item_size)) +
-                padding * 2;
+        int desiredHeight = mContext.getResources().getDimensionPixelSize(R.dimen.app_sidebar_item_height);
         int numItems = (int)Math.floor(getHeight() / desiredHeight);
         ITEM_LAYOUT_PARAMS.height = getHeight() / numItems;
-        ITEM_LAYOUT_PARAMS.width = desiredHeight;
 
         for (ImageView icon : mInstalledPackages) {
-            AppInfo ai = (AppInfo)icon.getTag();
-            if (!mExcludedList.contains(new ComponentName(ai.mPackageName,
-                    ai.mClassName).flattenToString())) {
-                icon.setPadding(0, padding, 0, padding);
-                mAppContainer.addView(icon, ITEM_LAYOUT_PARAMS);
-                icon.setOnClickListener(mItemClickedListener);
-                icon.setOnTouchListener(mItemTouchedListener);
-                icon.setClickable(true);
-            }
+            mAppContainer.addView(icon, ITEM_LAYOUT_PARAMS);
+            icon.setOnClickListener(mItemClickedListener);
+            icon.setOnTouchListener(mItemTouchedListener);
+            icon.setClickable(true);
         }
 
         // we need our horizontal scroll view to wrap the linear layout
@@ -402,7 +386,7 @@ public class AppSidebar extends FrameLayout {
 
     private void launchApplication(AppInfo ai) {
         PackageManager pm = mContext.getPackageManager();
-        Intent intent = pm.getLaunchIntentForPackage(ai.mPackageName);
+        Intent intent = pm.getLaunchIntentForPackage(ai.mInfo.packageName);
         mContext.startActivity(intent);
         showAppContainer(false);
     }
@@ -410,7 +394,7 @@ public class AppSidebar extends FrameLayout {
     private OnClickListener mItemClickedListener = new OnClickListener() {
         @Override
         public void onClick(View view) {
-            if (mState != SIDEBAR_STATE.OPENED || mFirstTouch)
+            if (mState != SIDEBAR_STATE.OPENED)
                 return;
 
             launchApplication((AppInfo)view.getTag());
@@ -427,7 +411,7 @@ public class AppSidebar extends FrameLayout {
                 case MotionEvent.ACTION_DOWN:
                     AppInfo ai = (AppInfo)view.getTag();
                     mInfoBubble.bringToFront();
-                    mInfoBubble.setText(ai.mLabel);
+                    mInfoBubble.setText(ai.mInfo.loadLabel(mContext.getPackageManager()));
                     mSelectedItem = view;
                     positionInfoBubble(view, mScrollView.getScrollY());
                     showInfoBubble(true);
@@ -440,6 +424,7 @@ public class AppSidebar extends FrameLayout {
     private void positionInfoBubble(View v, int scrollOffset) {
         int marginTop = v.getTop() + v.getHeight()/2
                 - mInfoBubble.getHeight()/2 - scrollOffset;
+        Log.i(TAG, "positionInfoBubble: scrollOffset=" + scrollOffset + " marginTop=" + marginTop);
         mInfoBubbleParams.setMargins(mScrollView.getWidth(), marginTop, 0, 0);
         mInfoBubble.setLayoutParams(mInfoBubbleParams);
     }
@@ -479,7 +464,6 @@ public class AppSidebar extends FrameLayout {
             if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
                 showInfoBubble(false);
                 mSnapTrigger = true;
-                mFirstTouch = false;
                 updateAutoHideTimer();
                 if (mState != SIDEBAR_STATE.OPENED)
                     return false;
@@ -487,22 +471,6 @@ public class AppSidebar extends FrameLayout {
                 if (ev.getX() > this.getWidth()*2 && mSelectedItem != null &&
                         mInfoBubble.getVisibility() == View.VISIBLE) {
                     launchApplication((AppInfo)mSelectedItem.getTag());
-                }
-            } else if (action == MotionEvent.ACTION_DOWN) {
-                mSnapTrigger = false;
-                // see if we touched on a child and if so show info bubble
-                final float x = ev.getX();
-                final float y = ev.getY() + getScrollY();
-                for (View v : mInstalledPackages) {
-                    if (y >= v.getY() && y <= v.getY()+v.getHeight()) {
-                        AppInfo ai = (AppInfo)v.getTag();
-                        mInfoBubble.bringToFront();
-                        mInfoBubble.setText(ai.mLabel);
-                        mSelectedItem = v;
-                        positionInfoBubble(v, mScrollView.getScrollY());
-                        showInfoBubble(true);
-                        break;
-                    }
                 }
             }
             return super.onTouchEvent(ev);
@@ -522,10 +490,6 @@ public class AppSidebar extends FrameLayout {
                     Settings.System.APP_SIDEBAR_SORT_TYPE), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.APP_SIDEBAR_TRANSPARENCY), false, this);
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.APP_SIDEBAR_ITEM_SIZE), false, this);
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.APP_SIDEBAR_EXCLUDE_LIST), false, this);
             update();
         }
 
@@ -566,28 +530,11 @@ public class AppSidebar extends FrameLayout {
                     mScrollView.setAlpha(barAlpha);
                 mBarAlpha = barAlpha;
             }
-
-            float size = (float)Settings.System.getInt(resolver,
-                    Settings.System.APP_SIDEBAR_ITEM_SIZE, 100) / 100f;
-            if (mBarSizeScale != size) {
-                mBarSizeScale = size;
-                layoutItems();
-            }
-
-            String excluded = Settings.System.getString(resolver,
-                    Settings.System.APP_SIDEBAR_EXCLUDE_LIST);
-            if (!TextUtils.isEmpty(excluded)) {
-                mExcludedList = new ArrayList<String>(Arrays.asList(excluded.split("\\|")));
-                if(mScrollView != null)
-                    layoutItems();
-            }
         }
     }
 
     private class AppInfo {
-        String mLabel;
-        String mPackageName;
-        String mClassName;
+        ActivityInfo mInfo;
         PkgUsageStats mStats;
     }
 
@@ -603,17 +550,25 @@ public class AppSidebar extends FrameLayout {
     }
 
     public static class AscendingComparator implements Comparator<ImageView> {
+        PackageManager mPm;
+        AscendingComparator(PackageManager pm) {
+            mPm = pm;
+        }
         public final int compare(ImageView a, ImageView b) {
-            String alabel = ((AppInfo)a.getTag()).mLabel;
-            String blabel = ((AppInfo)b.getTag()).mLabel;
+            String alabel = ((AppInfo)a.getTag()).mInfo.loadLabel(mPm).toString();
+            String blabel = ((AppInfo)b.getTag()).mInfo.loadLabel(mPm).toString();
             return alabel.compareTo(blabel);
         }
     }
 
     public static class DescendingComparator implements Comparator<ImageView> {
+        PackageManager mPm;
+        DescendingComparator(PackageManager pm) {
+            mPm = pm;
+        }
         public final int compare(ImageView a, ImageView b) {
-            String alabel = ((AppInfo)a.getTag()).mLabel;
-            String blabel = ((AppInfo)b.getTag()).mLabel;
+            String alabel = ((AppInfo)a.getTag()).mInfo.loadLabel(mPm).toString();
+            String blabel = ((AppInfo)b.getTag()).mInfo.loadLabel(mPm).toString();
             return blabel.compareTo(alabel);
         }
     }

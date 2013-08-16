@@ -107,6 +107,6 @@
     <bool name="config_show4GForLTE">true</bool>
 
     <!-- configurable width dimension for the app sidebar trigger area -->
-    <dimen name="config_app_sidebar_trigger_width">12dip</dimen>
+    <dimen name="config_app_sidebar_trigger_width">10dip</dimen>
 </resources>
 
