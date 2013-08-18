@@ -16,6 +16,7 @@
 
 package com.android.systemui.statusbar.phone;
 
+import java.io.File;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -28,24 +29,36 @@ import android.animation.ObjectAnimator;
 import android.animation.TimeInterpolator;
 import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
+import android.app.Dialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.StatusBarManager;
 import android.service.notification.StatusBarNotification;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
+import android.provider.AlarmClock;
+import android.provider.CalendarContract;
+import android.provider.CalendarContract.Events;
+import android.content.ActivityNotFoundException;
+import android.content.res.Configuration;
 import android.content.SharedPreferences;
 import android.content.res.CustomTheme;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.database.ContentObserver;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
+import android.graphics.PorterDuff.Mode;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.inputmethodservice.InputMethodService;
@@ -61,6 +74,7 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.service.dreams.DreamService;
 import android.service.dreams.IDreamManager;
+import android.speech.RecognizerIntent;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
 import android.util.Log;
@@ -118,6 +132,8 @@ import com.android.systemui.statusbar.policy.OnSizeChangedListener;
 import com.android.systemui.statusbar.policy.Prefs;
 import com.android.systemui.statusbar.powerwidget.PowerWidget;
 
+import java.net.URISyntaxException;
+import java.io.IOException;
 public class PhoneStatusBar extends BaseStatusBar {
     static final String TAG = "PhoneStatusBar";
     public static final boolean DEBUG = BaseStatusBar.DEBUG;
@@ -167,6 +183,8 @@ public class PhoneStatusBar extends BaseStatusBar {
     private float mFlingGestureMaxOutputVelocityPx; // how fast can it really go? (should be a little
                                                     // faster than mSelfCollapseVelocityPx)
 
+    private final String NOTIF_WALLPAPER_IMAGE_PATH = "/data/data/com.android.settings/files/notification_wallpaper.jpg";
+
     PhoneStatusBarPolicy mIconPolicy;
 
     private AppSidebar mAppSidebar;
@@ -202,7 +220,18 @@ public class PhoneStatusBar extends BaseStatusBar {
 
     // left-hand icons
     LinearLayout mStatusIcons;
+    // layout for center clock
+    LinearLayout mCenterClockLayout;
     // the icons themselves
+    final static String ACTION_EVENT = "**event**";
+    final static String ACTION_ALARM = "**alarm**";
+    final static String ACTION_TODAY = "**today**";
+    final static String ACTION_VOICEASSIST = "**assist**";
+    final static String ACTION_NOTHING = "**nothing**";
+    final static String ACTION_UPDATE = "**update**";
+    private Intent intent;
+	private String mShortClick;
+    private String mLongClick;
     IconMerger mNotificationIcons;
     // [+>
     View mMoreIcon;
@@ -247,6 +276,9 @@ public class PhoneStatusBar extends BaseStatusBar {
     private Clock mClock;
 
     private boolean mShowCarrierInPanel = false;
+
+    // clock
+    private boolean mShowClock;
 
     // drag bar
     CloseDragHandle mCloseView;
@@ -528,6 +560,7 @@ public class PhoneStatusBar extends BaseStatusBar {
         mMoreIcon = mStatusBarView.findViewById(R.id.moreIcon);
         mNotificationIcons.setOverflowIndicator(mMoreIcon);
         mStatusBarContents = (LinearLayout)mStatusBarView.findViewById(R.id.status_bar_contents);
+        mCenterClockLayout = (LinearLayout)mStatusBarView.findViewById(R.id.center_clock_layout);
         mTickerView = mStatusBarView.findViewById(R.id.ticker);
 
         /* Destroy the old widget before recreating the expanded dialog
@@ -554,9 +587,15 @@ public class PhoneStatusBar extends BaseStatusBar {
 
         mDateTimeView = mNotificationPanelHeader.findViewById(R.id.datetime);
         if (mDateTimeView != null) {
-            mDateTimeView.setOnClickListener(mClockClickListener);
             mDateTimeView.setEnabled(true);
         }
+	   
+	    mDateView.setOnClickListener(mDateViewListener);
+            mDateView.setOnLongClickListener(mDateViewLongClickListener);
+
+        SettingsObserver settingsObserver = new SettingsObserver(new Handler());
+        settingsObserver.observe();
+        updateSettings();
 
         mSettingsButton = (ImageView) mStatusBarWindow.findViewById(R.id.settings_button);
         if (mSettingsButton != null) {
@@ -629,37 +668,6 @@ public class PhoneStatusBar extends BaseStatusBar {
         mBatteryController = new BatteryController(mContext);
         mBatteryController.addIconView((ImageView)mStatusBarView.findViewById(R.id.battery));
         mBatteryController.addLabelView((TextView)mStatusBarView.findViewById(R.id.battery_text));
-
-        mCircleBattery = (CircleBattery) mStatusBarView.findViewById(R.id.circle_battery);
-        mBatteryController.addStateChangedCallback(mCircleBattery);
-
-        // Dock Battery support
-        mHasDockBattery = mContext.getResources().getBoolean(
-                com.android.internal.R.bool.config_hasDockBattery);
-
-        if (mHasDockBattery) {
-            mDockBatteryController = new DockBatteryController(mContext);
-            mDockBatteryController.addIconView(
-                    (ImageView)mStatusBarView.findViewById(R.id.dock_battery));
-            mDockBatteryController.addLabelView(
-                    (TextView)mStatusBarView.findViewById(R.id.dock_battery_text));
-
-            mCircleDockBattery =
-                    (CircleDockBattery) mStatusBarView.findViewById(R.id.circle_dock_battery);
-            final DockBatteryController.DockBatteryStateChangeCallback callback =
-                    (DockBatteryController.DockBatteryStateChangeCallback) mCircleDockBattery;
-            mDockBatteryController.addStateChangedCallback(callback);
-        } else {
-            // Remove dock battery icons if device doesn't hava dock battery support
-            View v = mStatusBarView.findViewById(R.id.dock_battery);
-            if (v != null) mStatusBarView.removeView(v);
-            v = mStatusBarView.findViewById(R.id.dock_battery_text);
-            if (v != null) mStatusBarView.removeView(v);
-            v = mStatusBarView.findViewById(R.id.circle_dock_battery);
-            if (v != null) mStatusBarView.removeView(v);
-            mCircleDockBattery = null;
-        }
-
         mNetworkController = new NetworkController(mContext);
         mBluetoothController = new BluetoothController(mContext);
 
@@ -709,6 +717,9 @@ public class PhoneStatusBar extends BaseStatusBar {
                 }
             });
         }
+
+        // Set notification background
+        setNotificationWallpaperHelper();
 
         // Quick Settings (where available, some restrictions apply)
         if (mHasSettingsPanel) {
@@ -1403,8 +1414,19 @@ public class PhoneStatusBar extends BaseStatusBar {
     }
 
     public void showClock(boolean show) {
-        if (mClock != null) {
-            mClock.setHidden(!show);
+        if (mStatusBarView == null) return;
+        ContentResolver resolver = mContext.getContentResolver();
+        View clock = mStatusBarView.findViewById(R.id.clock);
+        View cclock = mStatusBarView.findViewById(R.id.center_clock);
+        boolean rightClock = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 1);
+        boolean centerClock = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 2);
+        if (rightClock && clock != null) {
+            clock.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        if (centerClock && cclock != null) {
+            cclock.setVisibility(show ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -2688,11 +2710,88 @@ public class PhoneStatusBar extends BaseStatusBar {
         }
     };
 
-    private final View.OnClickListener mClockClickListener = new View.OnClickListener() {
-        @Override
+  
+
+    private View.OnClickListener mDateViewListener = new View.OnClickListener() {
         public void onClick(View v) {
-            startActivityDismissingKeyguard(
-                    new Intent(Intent.ACTION_QUICK_CLOCK), true); // have fun, everyone
+		updateSettings();
+        if (mShortClick.equals(ACTION_NOTHING)) {
+            // Do nothing....
+        } else {
+            try {
+                ActivityManagerNative.getDefault().dismissKeyguardOnNextActivity();
+            } catch (RemoteException e) {
+            }
+            if (mShortClick.equals(ACTION_TODAY)) {
+                 // A date-time specified in milliseconds since the epoch.
+                 long startMillis = System.currentTimeMillis();
+                 Uri.Builder builder = CalendarContract.CONTENT_URI.buildUpon();
+                 builder.appendPath("time");
+                 ContentUris.appendId(builder, startMillis);
+                 intent = new Intent(Intent.ACTION_VIEW)
+                      .setData(builder.build());
+            } else if (mShortClick.equals(ACTION_EVENT)) {
+                 intent = new Intent(Intent.ACTION_INSERT)
+                      .setData(Events.CONTENT_URI);
+            } else if (mShortClick.equals(ACTION_VOICEASSIST)) {
+                 intent = new Intent(RecognizerIntent.ACTION_WEB_SEARCH);
+            } else if (mShortClick.equals(ACTION_ALARM)) {
+                 intent = new Intent(AlarmClock.ACTION_SET_ALARM);
+            } else {
+                try {
+                    intent = Intent.parseUri(mShortClick, 0);
+                } catch (URISyntaxException e) {
+                }
+            }
+               try {
+                   intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                   mContext.startActivity(intent);
+               } catch (ActivityNotFoundException e){
+               }
+            animateCollapsePanels();
+            }
+        }
+    };
+   private View.OnLongClickListener mDateViewLongClickListener = new View.OnLongClickListener() {
+
+        @Override
+        public boolean onLongClick(View v) {
+        if (mLongClick.equals(ACTION_NOTHING)) {
+            // Do nothing....
+        } else {
+            try {
+                ActivityManagerNative.getDefault().dismissKeyguardOnNextActivity();
+            } catch (RemoteException e) {
+            }
+            if (mLongClick.equals(ACTION_TODAY)) {
+                 // A date-time specified in milliseconds since the epoch.
+                 long startMillis = System.currentTimeMillis();
+                 Uri.Builder builder = CalendarContract.CONTENT_URI.buildUpon();
+                 builder.appendPath("time");
+                 ContentUris.appendId(builder, startMillis);
+                 intent = new Intent(Intent.ACTION_VIEW)
+                      .setData(builder.build());
+            } else if (mLongClick.equals(ACTION_EVENT)) {
+                 intent = new Intent(Intent.ACTION_INSERT)
+                      .setData(Events.CONTENT_URI);
+            } else if (mLongClick.equals(ACTION_VOICEASSIST)) {
+                 intent = new Intent(RecognizerIntent.ACTION_WEB_SEARCH);
+            } else if (mLongClick.equals(ACTION_ALARM)) {
+                 intent = new Intent(AlarmClock.ACTION_SET_ALARM);
+            } else {
+                try {
+                    intent = Intent.parseUri(mLongClick, 0);
+                } catch (URISyntaxException e) {
+                }
+            }
+               try {
+                   intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                   mContext.startActivity(intent);
+               } catch (ActivityNotFoundException e){
+               }
+            animateCollapsePanels();
+			}
+            return true;
         }
     };
 
@@ -2745,34 +2844,6 @@ public class PhoneStatusBar extends BaseStatusBar {
         animateCollapsePanels();
         updateNotificationIcons();
         resetUserSetupObserver();
-        mSettingsObserver.onChange(true);
-        mPowerWidget.setupWidget();
-        mPowerWidget.updateVisibility();
-        if (mTilesChangedObserver != null) {
-            mTilesChangedObserver.onChange(true);
-        }
-        if (mSignalView != null) {
-            mSignalView.updateSettings();
-        }
-        if (mSignalTextView != null) {
-            mSignalTextView.updateSettings();
-        }
-        if (mBatteryController != null) {
-            mBatteryController.updateSettings();
-        }
-        if (mCircleBattery != null) {
-            mCircleBattery.updateSettings();
-        }
-        if (mCircleDockBattery != null) {
-            mCircleDockBattery.updateSettings();
-        }
-        if (mClock != null) {
-            mClock.updateSettings();
-        }
-        if (mNavigationBarView != null) {
-            mNavigationBarView.updateSettings();
-        }
-        super.userSwitched(newUserId);
     }
 
     private void resetUserSetupObserver() {
@@ -3050,9 +3121,13 @@ public class PhoneStatusBar extends BaseStatusBar {
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
+		
+            setNotificationWallpaperHelper();
+            setNotificationAlphaHelper();
             if (mSettingsContainer != null) {
                 mQS.setupQuickSettings();
             }
+			updateSettings();
         }
 
         public void startObserving() {
@@ -3084,7 +3159,74 @@ public class PhoneStatusBar extends BaseStatusBar {
             cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.QS_DYNAMIC_WIFI),
                     false, this, UserHandle.USER_ALL);
+            cr.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.NOTIF_WALLPAPER_ALPHA),
+                    false, this, UserHandle.USER_ALL);
+					
+			cr.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.NOTIFICATION_BACKGROUND),
+                    false, this, UserHandle.USER_ALL);	
+					
+		    cr.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.NOTIF_ALPHA),
+                    false, this, UserHandle.USER_ALL);
+					
         }
+    }
+
+    private void setNotificationWallpaperHelper() {
+        float wallpaperAlpha = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.NOTIF_WALLPAPER_ALPHA, 0.1f);
+        String notifiBack = Settings.System.getString(mContext.getContentResolver(), Settings.System.NOTIFICATION_BACKGROUND);
+        File file = new File(NOTIF_WALLPAPER_IMAGE_PATH);
+        mNotificationPanel.setBackgroundResource(0);
+        mNotificationPanel.setBackgroundResource(R.drawable.notification_panel_bg);
+        Drawable background = mNotificationPanel.getBackground();
+        background.setAlpha(0);
+        if (!file.exists()) {
+            if (notifiBack != null && !notifiBack.isEmpty()) {
+                background.setColorFilter(Integer.parseInt(notifiBack), Mode.SRC_ATOP);
+            }
+         background.setAlpha((int) ((1-wallpaperAlpha) * 255));
+        }
+    }
+
+    private void setNotificationAlphaHelper() {
+        float notifAlpha = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.NOTIF_ALPHA, 0.0f);
+        if (mPile != null) {
+            int N = mNotificationData.size();
+            for (int i=0; i<N; i++) {
+              Entry ent = mNotificationData.get(N-i-1);
+              View expanded = ent.expanded;
+              if (expanded !=null && expanded.getBackground()!=null) expanded.getBackground().setAlpha((int) ((1-notifAlpha) * 255));
+              View large = ent.getLargeView();
+              if (large != null && large.getBackground()!=null) large.getBackground().setAlpha((int) ((1-notifAlpha) * 255));
+            }
+        }
+    }
+	public void updateSettings() {
+        ContentResolver cr = mStatusBarView.getContext().getContentResolver();
+
+        mShortClick = Settings.System.getString(cr,
+                Settings.System.NOTIFICATION_CLOCK_SHORTCLICK);
+
+        mLongClick = Settings.System.getString(cr,
+                Settings.System.NOTIFICATION_CLOCK_LONGCLICK);
+
+       
+
+        if (mShortClick == null || mShortClick == "") {
+            mShortClick = "**nothing**";
+        }
+        if (mLongClick == null || mLongClick == "") {
+            mLongClick = "**nothing**";
+        }
+
+        setNotificationWallpaperHelper();
+        setNotificationAlphaHelper();
+   
+
+      
+        
     }
 
 }
