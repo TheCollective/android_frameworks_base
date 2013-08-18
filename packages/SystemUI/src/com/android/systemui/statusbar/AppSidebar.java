@@ -65,6 +65,7 @@ public class AppSidebar extends FrameLayout {
     private int mSortType = SORT_TYPE_AZ;
     private float mBarAlpha = 1f;
     private float mBarSizeScale = 1f;
+    private boolean mFirstTouch = false;
 
     private IUsageStats mUsageStatsService;
     private Context mContext;
@@ -132,6 +133,8 @@ public class AppSidebar extends FrameLayout {
                 if (ev.getX() <= mTriggerWidth && mState == SIDEBAR_STATE.CLOSED) {
                     showAppContainer(true);
                     cancelAutoHideTimer();
+                    mScrollView.onTouchEvent(ev);
+                    mFirstTouch = true;
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -401,7 +404,7 @@ public class AppSidebar extends FrameLayout {
     private OnClickListener mItemClickedListener = new OnClickListener() {
         @Override
         public void onClick(View view) {
-            if (mState != SIDEBAR_STATE.OPENED)
+            if (mState != SIDEBAR_STATE.OPENED || mFirstTouch)
                 return;
 
             launchApplication((AppInfo)view.getTag());
@@ -470,6 +473,7 @@ public class AppSidebar extends FrameLayout {
             if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
                 showInfoBubble(false);
                 mSnapTrigger = true;
+                mFirstTouch = false;
                 updateAutoHideTimer();
                 if (mState != SIDEBAR_STATE.OPENED)
                     return false;
@@ -477,6 +481,22 @@ public class AppSidebar extends FrameLayout {
                 if (ev.getX() > this.getWidth()*2 && mSelectedItem != null &&
                         mInfoBubble.getVisibility() == View.VISIBLE) {
                     launchApplication((AppInfo)mSelectedItem.getTag());
+                }
+            } else if (action == MotionEvent.ACTION_DOWN) {
+                mSnapTrigger = false;
+                // see if we touched on a child and if so show info bubble
+                final float x = ev.getX();
+                final float y = ev.getY() + getScrollY();
+                for (View v : mInstalledPackages) {
+                    if (y >= v.getY() && y <= v.getY()+v.getHeight()) {
+                        AppInfo ai = (AppInfo)v.getTag();
+                        mInfoBubble.bringToFront();
+                        mInfoBubble.setText(ai.mLabel);
+                        mSelectedItem = v;
+                        positionInfoBubble(v, mScrollView.getScrollY());
+                        showInfoBubble(true);
+                        break;
+                    }
                 }
             }
             return super.onTouchEvent(ev);
