@@ -34,6 +34,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.BatteryManager;
 import android.os.Handler;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.view.View;
@@ -118,14 +119,14 @@ public class CircleBattery extends ImageView {
 		    int mDefaultColor = mContext.getResources().getColor(R.color.circle_battery_mod);
 		    int mDefaultFColor = mContext.getResources().getColor(R.color.circle_battery_font);
 			
-		    mBatteryColor = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.STATUSBAR_BATTERY_COLOR, mDefaultColor);
+		    mBatteryColor = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_BATTERY_COLOR, mDefaultColor, UserHandle.USER_CURRENT);
 				
-			mBatteryFColor = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.STATUSBAR_BATTERY_FCOLOR, mDefaultFColor);	
+			mBatteryFColor = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_BATTERY_FCOLOR, mDefaultFColor, UserHandle.USER_CURRENT);	
 		
-            int batteryStyle = (Settings.System.getInt(mContext.getContentResolver(),
-                    Settings.System.STATUS_BAR_BATTERY, 0));
+            int batteryStyle = (Settings.System.getIntForUser(mContext.getContentResolver(),
+                    Settings.System.STATUS_BAR_BATTERY, 0, UserHandle.USER_CURRENT));
 
             mActivated = (batteryStyle == BatteryController.BATTERY_STYLE_CIRCLE || batteryStyle == BatteryController.BATTERY_STYLE_CIRCLE_PERCENT);
             mPercentage = (batteryStyle == BatteryController.BATTERY_STYLE_CIRCLE_PERCENT);
