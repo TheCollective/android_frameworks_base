@@ -193,8 +193,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private static final int KEY_ACTION_IN_APP_SEARCH = 7;
     private static final int KEY_ACTION_POWER = 8;
     private static final int KEY_ACTION_KILL_APP = 9;
-    private static final int KEY_ACTION_LAST_APP = 10;
-    private static final int KEY_ACTION_CUSTOM_APP = 11;
+    private static final int KEY_ACTION_CUSTOM_APP = 10;
 
     // Masks for checking presence of hardware keys.
     // Must match values in core/res/res/values/config.xml
