@@ -15,6 +15,7 @@ import android.os.Handler;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.*;
@@ -67,6 +68,7 @@ public class AppSidebar extends FrameLayout {
     private float mBarSizeScale = 1f;
     private boolean mFirstTouch = false;
 
+    private List<String> mExcludedList;
     private IUsageStats mUsageStatsService;
     private Context mContext;
     private SettingsObserver mSettingsObserver;
@@ -95,9 +97,6 @@ public class AppSidebar extends FrameLayout {
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_HIDE_APP_CONTAINER);
-        getContext().registerReceiver(mBroadcastReceiver, filter);
         if (DEBUG_LAYOUT)
             setBackgroundColor(0xffff0000);
         getInstalledAppsList();
@@ -111,12 +110,22 @@ public class AppSidebar extends FrameLayout {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         mSettingsObserver.observe();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_HIDE_APP_CONTAINER);
+        getContext().registerReceiver(mBroadcastReceiver, filter);
+        filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_PACKAGE_ADDED);
+        filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        filter.addDataScheme("package");
+        getContext().registerReceiver(mAppChangeReceiver, filter);
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         mSettingsObserver.unobserve();
+        mContext.unregisterReceiver(mBroadcastReceiver);
+        mContext.unregisterReceiver(mAppChangeReceiver);
     }
 
     @Override
@@ -142,7 +151,7 @@ public class AppSidebar extends FrameLayout {
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                updateAutoHideTimer();
+                updateAutoHideTimer(AUTO_HIDE_DELAY);
                 if (mState != SIDEBAR_STATE.CLOSED)
                     mState = SIDEBAR_STATE.OPENED;
                 break;
@@ -160,7 +169,7 @@ public class AppSidebar extends FrameLayout {
                 return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                updateAutoHideTimer();
+                updateAutoHideTimer(AUTO_HIDE_DELAY);
                 break;
             case MotionEvent.ACTION_MOVE:
             default:
@@ -274,7 +283,7 @@ public class AppSidebar extends FrameLayout {
         return km.inKeyguardRestrictedInputMode();
     }
 
-    public void updateAutoHideTimer() {
+    public void updateAutoHideTimer(long delay) {
         Context ctx = getContext();
         AlarmManager am = (AlarmManager)ctx.getSystemService(Context.ALARM_SERVICE);
         Intent i = new Intent(ACTION_HIDE_APP_CONTAINER);
@@ -285,7 +294,7 @@ public class AppSidebar extends FrameLayout {
         } catch (Exception e) {
         }
         Calendar time = Calendar.getInstance();
-        time.setTimeInMillis(System.currentTimeMillis() + AUTO_HIDE_DELAY);
+        time.setTimeInMillis(System.currentTimeMillis() + delay);
         am.set(AlarmManager.RTC, time.getTimeInMillis(), pi);
     }
 
@@ -300,6 +309,17 @@ public class AppSidebar extends FrameLayout {
         } catch (Exception e) {
         }
     }
+
+    private final BroadcastReceiver mAppChangeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (Intent.ACTION_PACKAGE_ADDED.equals(action) ||
+                    Intent.ACTION_PACKAGE_REMOVED.equals(action)) {
+                getInstalledAppsList();
+            }
+        }
+    };
 
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -372,18 +392,22 @@ public class AppSidebar extends FrameLayout {
         ITEM_LAYOUT_PARAMS.width = desiredHeight;
 
         for (ImageView icon : mInstalledPackages) {
-            icon.setPadding(0, padding, 0, padding);
-            mAppContainer.addView(icon, ITEM_LAYOUT_PARAMS);
-            icon.setOnClickListener(mItemClickedListener);
-            icon.setOnTouchListener(mItemTouchedListener);
-            icon.setClickable(true);
+            AppInfo ai = (AppInfo)icon.getTag();
+            if (mExcludedList == null || !mExcludedList.contains(new ComponentName(ai.mPackageName,
+                    ai.mClassName).flattenToString())) {
+                icon.setPadding(0, padding, 0, padding);
+                mAppContainer.addView(icon, ITEM_LAYOUT_PARAMS);
+                icon.setOnClickListener(mItemClickedListener);
+                icon.setOnTouchListener(mItemTouchedListener);
+                icon.setClickable(true);
+            }
         }
 
         // we need our horizontal scroll view to wrap the linear layout
         if (mScrollView == null) {
             mScrollView = new SnappingScrollView(mContext);
             // make the fading edge the size of a button (makes it more noticible that we can scroll
-            mScrollView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_INSET);
+            mScrollView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
             mScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
             mScrollView.setBackgroundResource(R.drawable.app_sidebar_background);
         }
@@ -395,10 +419,15 @@ public class AppSidebar extends FrameLayout {
     }
 
     private void launchApplication(AppInfo ai) {
+        updateAutoHideTimer(500);
+        showInfoBubble(false);
+        ComponentName cn = new ComponentName(ai.mPackageName, ai.mClassName);
         PackageManager pm = mContext.getPackageManager();
-        Intent intent = pm.getLaunchIntentForPackage(ai.mPackageName);
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setComponent(cn);
         mContext.startActivity(intent);
-        showAppContainer(false);
     }
 
     private OnClickListener mItemClickedListener = new OnClickListener() {
@@ -474,7 +503,7 @@ public class AppSidebar extends FrameLayout {
                 showInfoBubble(false);
                 mSnapTrigger = true;
                 mFirstTouch = false;
-                updateAutoHideTimer();
+                updateAutoHideTimer(AUTO_HIDE_DELAY);
                 if (mState != SIDEBAR_STATE.OPENED)
                     return false;
 
@@ -518,6 +547,8 @@ public class AppSidebar extends FrameLayout {
                     Settings.System.APP_SIDEBAR_TRANSPARENCY), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.APP_SIDEBAR_ITEM_SIZE), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.APP_SIDEBAR_EXCLUDE_LIST), false, this);
             update();
         }
 
@@ -547,7 +578,8 @@ public class AppSidebar extends FrameLayout {
                         Collections.sort(mInstalledPackages, mDescendingComparator);
                         break;
                 }
-                layoutItems();
+                if(mScrollView != null)
+                    layoutItems();
             }
             mSortType = sortType;
 
@@ -563,7 +595,16 @@ public class AppSidebar extends FrameLayout {
                     Settings.System.APP_SIDEBAR_ITEM_SIZE, 100) / 100f;
             if (mBarSizeScale != size) {
                 mBarSizeScale = size;
-                layoutItems();
+                if(mScrollView != null)
+                    layoutItems();
+            }
+
+            String excluded = Settings.System.getString(resolver,
+                    Settings.System.APP_SIDEBAR_EXCLUDE_LIST);
+            if (!TextUtils.isEmpty(excluded)) {
+                mExcludedList = new ArrayList<String>(Arrays.asList(excluded.split("\\|")));
+                if(mScrollView != null)
+                    layoutItems();
             }
         }
     }
