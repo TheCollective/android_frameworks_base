@@ -2702,14 +2702,7 @@ public final class Settings {
          *
          * @hide
          */
-        public static final String APP_SIDE_BAR_ENABLED = "app_sidebar_enabled";
-
-        /**
-         * How to sort and order the items in the app sidebar
-         *
-         * @hide
-         */
-        public static final String APP_SIDEBAR_SORT_TYPE = "app_sidebar_sort_type";
+        public static final String APP_SIDEBAR_ENABLED = "app_sidebar_enabled";
 
         /**
          * User defined transparency level for sidebar
@@ -2719,18 +2712,46 @@ public final class Settings {
         public static final String APP_SIDEBAR_TRANSPARENCY = "app_sidebar_transparency";
 
         /**
-         * Width and height of items in sidebar
+         * Disable text labels for app sidebar items
          *
          * @hide
          */
-        public static final String APP_SIDEBAR_ITEM_SIZE = "app_sidebar_item_size";
+        public static final String APP_SIDEBAR_DISABLE_LABELS = "app_sidebar_disable_labels";
 
         /**
-         * List of apps to exclude from sidebar
+         * Position of app sidebar
          *
          * @hide
          */
-        public static final String APP_SIDEBAR_EXCLUDE_LIST = "app_sidebar_exclude_list";
+        public static final String APP_SIDEBAR_POSITION = "app_sidebar_position";
+
+        /**
+         * Width of the appbar trigger
+         *
+         * @hide
+         */
+        public static final String APP_SIDEBAR_TRIGGER_WIDTH = "app_sidebar_trigger_width";
+
+        /**
+         * Position of appbar trigger
+         *
+         * @hide
+         */
+        public static final String APP_SIDEBAR_TRIGGER_TOP = "app_sidebar_trigger_top";
+
+        /**
+         * Height of the appbar trigger
+         *
+         * @hide
+         */
+        public static final String APP_SIDEBAR_TRIGGER_HEIGHT = "app_sidebar_trigger_height";
+
+        /**
+         * Whether to display the trigger region or not
+         *
+         * @hide
+         */
+        public static final String APP_SIDEBAR_SHOW_TRIGGER = "app_sidebar_show_trigger";
 
         /**
          * Quick Settings Panel Tiles to Use
