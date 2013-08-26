@@ -28,6 +28,7 @@ import com.android.systemui.R;
 import com.android.internal.app.IUsageStats;
 import com.android.internal.os.PkgUsageStats;
 
+import java.text.Collator;
 import java.util.*;
 
 public class AppSidebar extends FrameLayout {
@@ -67,6 +68,7 @@ public class AppSidebar extends FrameLayout {
     private float mBarAlpha = 1f;
     private float mBarSizeScale = 1f;
     private boolean mFirstTouch = false;
+    private static final Collator sCollator = Collator.getInstance();
 
     private List<String> mExcludedList;
     private IUsageStats mUsageStatsService;
@@ -513,6 +515,7 @@ public class AppSidebar extends FrameLayout {
                 }
             } else if (action == MotionEvent.ACTION_DOWN) {
                 mSnapTrigger = false;
+                cancelAutoHideTimer();
                 // see if we touched on a child and if so show info bubble
                 final float x = ev.getX();
                 final float y = ev.getY() + getScrollY();
@@ -631,15 +634,15 @@ public class AppSidebar extends FrameLayout {
         public final int compare(ImageView a, ImageView b) {
             String alabel = ((AppInfo)a.getTag()).mLabel;
             String blabel = ((AppInfo)b.getTag()).mLabel;
-            return alabel.compareTo(blabel);
+            return sCollator.compare(alabel, blabel);
         }
     }
 
     public static class DescendingComparator implements Comparator<ImageView> {
         public final int compare(ImageView a, ImageView b) {
-            String alabel = ((AppInfo)a.getTag()).mLabel;
-            String blabel = ((AppInfo)b.getTag()).mLabel;
-            return blabel.compareTo(alabel);
+            String alabel = ((AppInfo)a.getTag()).mLabel.toLowerCase();
+            String blabel = ((AppInfo)b.getTag()).mLabel.toLowerCase();
+            return sCollator.compare(blabel, alabel);
         }
     }
 }
