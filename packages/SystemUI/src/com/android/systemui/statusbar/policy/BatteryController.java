@@ -52,7 +52,9 @@ public class BatteryController extends BroadcastReceiver {
      */
     public static final int BATTERY_STYLE_CIRCLE         = 2;
     public static final int BATTERY_STYLE_CIRCLE_PERCENT = 3;
-    public static final int BATTERY_STYLE_GONE           = 4;
+	public static final int BATTERY_STYLE_SQUARE         = 4;
+    public static final int BATTERY_STYLE_SQUARE_PERCENT = 5;
+    public static final int BATTERY_STYLE_GONE           = 6;
 
 
     private static final int BATTERY_TEXT_STYLE_NORMAL  = R.string.status_bar_settings_battery_meter_format;

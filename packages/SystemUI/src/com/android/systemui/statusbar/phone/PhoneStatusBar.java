@@ -120,6 +120,7 @@ import com.android.systemui.statusbar.StatusBarIconView;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.CircleBattery;
 import com.android.systemui.statusbar.policy.CircleDockBattery;
+import com.android.systemui.statusbar.policy.SquareBattery;
 import com.android.systemui.statusbar.policy.Clock;
 import com.android.systemui.statusbar.policy.DockBatteryController;
 import com.android.systemui.statusbar.policy.BluetoothController;
@@ -273,6 +274,7 @@ public class PhoneStatusBar extends BaseStatusBar {
     private SignalClusterTextView mSignalTextView;
     private CircleBattery mCircleBattery;
     private CircleDockBattery mCircleDockBattery;
+	private SquareBattery mSquareBattery;
     private Clock mClock;
 
     private boolean mShowCarrierInPanel = false;
