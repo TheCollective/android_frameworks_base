@@ -77,6 +77,7 @@ public class SquareBattery extends ImageView {
     // quiet a lot of paint variables. helps to move cpu-usage from actual drawing to initialization
     private Paint   mPaintFont;
 	private Paint   mPaintBatt;
+	private Paint   mPaintTip;
     private Paint   mPaintGray;
     private Paint   mPaintSystem;
     private Paint   mPaintRed;
@@ -232,6 +233,7 @@ public class SquareBattery extends ImageView {
         mPaintBatt.setStyle(Paint.Style.FILL);
 		
         mPaintGray = new Paint(mPaintFont);
+		mPaintTip = new Paint(mPaintBatt);
         mPaintSystem = new Paint(mPaintBatt);
         mPaintRed = new Paint(mPaintBatt);
 
@@ -244,6 +246,7 @@ public class SquareBattery extends ImageView {
         // could not find the darker definition anywhere in resources
         // do not want to use static 0x404040 color value. would break theming.
         mPaintGray.setColor(res.getColor(R.color.darker_gray));
+	    mPaintTip.setColor(res.getColor(R.color.darker_gray));	
         mPaintRed.setColor(res.getColor(R.color.holo_red_light));
 
         // font needs some extra settings
@@ -340,18 +343,18 @@ public class SquareBattery extends ImageView {
         if (padLevel >= 97) {
             padLevel = 100;
         }
-        clevel = dRect.bottom - (internalLevel / 3.9f);
+        clevel = dRect.bottom - (dRect.bottom * (internalLevel * 0.01f)) + (mSquareHeight / 10.5f);
         // draw thin gray ring first
 	//	canvas.drawRect(0, 0, 77, 77, mPaintGray);
        // canvas.drawArc(drawRect, 270, 360, false, mPaintGray);
         // draw colored arc representing charge level
-		canvas.drawRect(dRect.left + (mSquareWidth / 3f), dRect.top, dRect.right - (mSquareWidth / 3f), dRect.top + (mSquareHeight / 10.5f), mPaintGray);
+		canvas.drawRect(dRect.left + (mSquareWidth / 3f), dRect.top, dRect.right - (mSquareWidth / 3f), dRect.top + (mSquareHeight / 10.5f), mPaintTip);
         // canvas.drawArc(drawRect, 270 + animOffset, 3.6f * padLevel, false, usePaint);
 		canvas.drawRect(dRect.left, dRect.top + (mSquareHeight / 10.5f), dRect.right, dRect.bottom, mPaintGray);
 		if (mIsAnimating == true) {
-        canvas.drawRect(dRect.left, animOffset, dRect.right, dRect.bottom, usePaint);
+        canvas.drawRect(dRect.left + 1, animOffset, dRect.right - 1, dRect.bottom - 1, usePaint);
 		} else {
-		canvas.drawRect(dRect.left, clevel, dRect.right, dRect.bottom, usePaint);
+		canvas.drawRect(dRect.left + 1, clevel, dRect.right - 1, dRect.bottom - 1, usePaint);
 		}
 		
 	;
