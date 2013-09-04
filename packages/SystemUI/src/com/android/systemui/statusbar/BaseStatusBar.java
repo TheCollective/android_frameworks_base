@@ -154,6 +154,7 @@ public abstract class BaseStatusBar extends SystemUI implements
     // Halo
     protected Halo mHalo = null;
     protected Ticker mTicker;
+    protected boolean mHaloEnabled;
     protected boolean mHaloActive;
     protected boolean mHaloTaskerActive = false;
     protected ImageView mHaloButton;
@@ -344,6 +345,9 @@ public abstract class BaseStatusBar extends SystemUI implements
             // If the system process isn't there we're doomed anyway.
         }
 
+        mHaloEnabled = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.HALO_ENABLED, 0) == 1;
+
 	mHaloActive = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.HALO_ACTIVE, 0) == 1; 
 
@@ -414,6 +418,14 @@ public abstract class BaseStatusBar extends SystemUI implements
         observer.observe();
         mLocale = mContext.getResources().getConfiguration().locale;
 
+        // Listen for HALO enabled switch
+        mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.HALO_ENABLED), false, new ContentObserver(new Handler()) {
+            @Override
+            public void onChange(boolean selfChange) {
+                updateHalo();
+            }});
+
 	// Listen for HALO state
         mContext.getContentResolver().registerContentObserver(
                 Settings.System.getUriFor(Settings.System.HALO_ACTIVE), false, new ContentObserver(new Handler()) {
@@ -440,6 +452,11 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     protected void updateHaloButton() {
+        if (!mHaloEnabled) {
+            mHaloButtonVisible = false;
+        } else {
+            mHaloButtonVisible = true;
+        }
         if (mHaloButton != null) {
             mHaloButton.setVisibility(mHaloButtonVisible && !mHaloActive ? View.VISIBLE : View.GONE);
         }
@@ -456,10 +473,16 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     protected void updateHalo() {
+        mHaloEnabled = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.HALO_ENABLED, 0) == 1;
         mHaloActive = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.HALO_ACTIVE, 0) == 1;
 
         updateHaloButton();
+
+        if (!mHaloEnabled) {
+            mHaloActive = false;
+        }
 
         if (mHaloActive) {
             if (mHalo == null) {
@@ -1046,7 +1069,7 @@ public abstract class BaseStatusBar extends SystemUI implements
             }
 
             if (mIntent != null) {
-		if (mFloat && !"android".equals(mPkg) && !"com.paranoid.halo".equals(mPkg)) {
+		if (mFloat && !"android".equals(mPkg)) { 
                     Intent transparent = new Intent(mContext, com.android.systemui.Transparent.class);
                     transparent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_FLOATING_WINDOW);
                     mContext.startActivity(transparent);
@@ -1063,6 +1086,10 @@ public abstract class BaseStatusBar extends SystemUI implements
                     // the stack trace isn't very helpful here.  Just log the exception message.
                     Slog.w(TAG, "Sending contentIntent failed: " + e);
                 }
+
+                KeyguardManager kgm =
+                    (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
+                if (kgm != null) kgm.exitKeyguardSecurely(null);
             }
 
             try {
