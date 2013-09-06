@@ -328,16 +328,16 @@ public class SquareBattery extends ImageView {
         // turn red at 14% - same level android battery warning appears
         if (unknownStatus) {
             usePaint = mPaintGray;
-            internalLevel = 100; // Draw all the circle;
-        } else if (internalLevel <= 14) {
+            internalLevel = 100; // Draw all the square;
+        } else if (internalLevel <= 15) {
             usePaint = mPaintRed;
         }
 
       // 	RectF(float left, float top, float right, float bottom)
      //     drawRect (float left, float top, float right, float bottom, Paint paint)
 	 
-        // pad circle percentage to 100% once it reaches 97%
-        // for one, the circle looks odd with a too small gap,
+        // pad square percentage to 100% once it reaches 97%
+        // for one, the square looks odd with a too small gap,
         // for another, some phones never reach 100% due to hardware design
         int padLevel = internalLevel;
         if (padLevel >= 97) {
@@ -447,7 +447,7 @@ public class SquareBattery extends ImageView {
     }
 
     /***
-     * we need to measure the size of the circle battery by checking another
+     * we need to measure the size of the square battery by checking another
      * resource. unfortunately, those resources have transparent/empty borders
      * so we have to count the used pixel manually and deduct the size from
      * it. quite complicated, but the only way to fit properly into the
