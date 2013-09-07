@@ -16,11 +16,7 @@
 
 package com.android.server.power;
 
-import java.io.PrintWriter;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-
+import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
@@ -41,6 +37,11 @@ import android.view.SurfaceSession;
 
 import com.android.server.display.DisplayManagerService;
 import com.android.server.display.DisplayTransactionListener;
+
+import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
 /**
  * Bzzzoooop!  *crackle*
