@@ -62,6 +62,8 @@ import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
+import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.util.EventLog;
 import android.util.Log;
 import android.util.Slog;
@@ -288,16 +290,16 @@ final class ActivityStack {
     boolean mDismissKeyguardOnNextActivity = false;
 
     /**
-     * Is the privacy guard currently enabled?
-     */
-    String mPrivacyGuardPackageName = null;
-
-    /**
      * Save the most recent screenshot for reuse. This keeps Recents from taking two identical
      * screenshots, one for the Recents thumbnail and one for the pauseActivity thumbnail.
      */
     private ActivityRecord mLastScreenshotActivity = null;
     private Bitmap mLastScreenshotBitmap = null;
+
+    /**
+     * Is the privacy guard currently enabled?
+     */
+    String mPrivacyGuardPackageName = null;
 
     int mThumbnailWidth = -1;
     int mThumbnailHeight = -1;
@@ -325,6 +327,7 @@ final class ActivityStack {
             mReason = reason;
         }
     }
+
 
     private static final ActivityTrigger mActivityTrigger;
 
@@ -1566,7 +1569,7 @@ final class ActivityStack {
         
         // We need to start pausing the current activity so the top one
         // can be resumed...
-        if (mResumedActivity != null && !next.floatingWindow) { 
+        if (mResumedActivity != null && (pauseActiveAppWhenUsingHalo() || !next.floatingWindow)) {
             if (DEBUG_SWITCH) Slog.v(TAG, "Skip resume: need to start pausing");
             // At this point we want to put the upcoming activity's process
             // at the top of the LRU list, since we know we will be needing it
@@ -2808,7 +2811,8 @@ final class ActivityStack {
             launchFlags |= Intent.FLAG_ACTIVITY_NEW_TASK;
         }
 
-        if (r.resultTo != null && (launchFlags&Intent.FLAG_ACTIVITY_NEW_TASK) != 0) {
+        if (r.resultTo != null && (launchFlags&Intent.FLAG_ACTIVITY_NEW_TASK) != 0 &&
+                (launchFlags&Intent.FLAG_FLOATING_WINDOW) == 0) {
             // For whatever reason this activity is being launched into a new
             // task...  yet the caller has requested a result back.  Well, that
             // is pretty messed up, so instead immediately send back a cancel
@@ -4856,7 +4860,13 @@ final class ActivityStack {
 
         return true;
     }
-    
+
+    private boolean pauseActiveAppWhenUsingHalo() {
+        int isLowRAM = (ActivityManager.isLargeRAM()) ? 0 : 1;
+        return Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.HALO_PAUSE, isLowRAM) == 1;
+    }
+
     public void dismissKeyguardOnNextActivityLocked() {
         mDismissKeyguardOnNextActivity = true;
     }

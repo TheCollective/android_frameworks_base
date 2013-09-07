@@ -3115,6 +3115,13 @@ public final class Settings {
         public static final String HALO_SIZE = "halo_size";
 
         /**
+         * HALO pause activities?, defaults to 0 (no, do not pause) on devices which isLargeRAM() == true
+         * otherwise it defaults to 1 (yes, do pause)
+         * @hide
+         */
+         public static final String HALO_PAUSE = "halo_pause";
+
+        /**
          * Expanded desktop style (with status bar or without status bar)
          * @hide
          */

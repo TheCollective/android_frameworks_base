@@ -21,4 +21,3 @@ import android.app.LayerActivity;
 public class Transparent extends LayerActivity {
 
 }
-

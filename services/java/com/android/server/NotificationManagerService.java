@@ -28,6 +28,7 @@ import android.app.IActivityManager;
 import android.app.INotificationManager;
 import android.app.ITransientNotification;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.ProfileGroup;
 import android.app.ProfileManager;
@@ -554,9 +555,6 @@ public class NotificationManagerService extends INotificationManager.Stub
         }
     } 
 
-    /**
-     * Use this when you just want to know if notifications are OK for this package.
-     */
     public boolean areNotificationsEnabledForPackage(String pkg, int uid) {
         checkCallerIsSystem();
         return (mAppOps.checkOpNoThrow(AppOpsManager.OP_POST_NOTIFICATION, uid, pkg)
@@ -766,7 +764,8 @@ public class NotificationManagerService extends INotificationManager.Stub
             final ComponentName component = info.component;
             final int oldUser = info.userid;
             Slog.v(TAG, "disabling notification listener for user " + oldUser + ": " + component);
-            unregisterListenerService(component, info.userid);
+            // Do not un-register HALO, we un-register only when HALO is closed
+            if (!component.getPackageName().equals("HaloComponent")) unregisterListenerService(component, info.userid);
         }
 
         final int N = toAdd.size();
@@ -787,7 +786,8 @@ public class NotificationManagerService extends INotificationManager.Stub
     @Override
     public void registerListener(final INotificationListener listener,
             final ComponentName component, final int userid) {
-        checkCallerIsSystem();
+
+        if (!component.getPackageName().equals("HaloComponent")) checkCallerIsSystem();
 
         synchronized (mNotificationList) {
             try {
@@ -1509,7 +1509,7 @@ public class NotificationManagerService extends INotificationManager.Stub
         mAppOps = (AppOpsManager)context.getSystemService(Context.APP_OPS_SERVICE);
 
         importOldBlockDb();
-	    loadHaloBlockDb();
+	loadHaloBlockDb();
 
         mStatusBar = statusBar;
         statusBar.setNotificationCallbacks(mNotificationCallbacks);
@@ -1930,11 +1930,13 @@ public class NotificationManagerService extends INotificationManager.Stub
         final boolean canInterrupt = (score >= SCORE_INTERRUPTION_THRESHOLD);
 
         synchronized (mNotificationList) {
+
             final boolean inQuietHours = inQuietHours();
 
             final StatusBarNotification n = new StatusBarNotification(
                     pkg, id, tag, callingUid, callingPid, score, notification, user);
             NotificationRecord r = new NotificationRecord(n);
+
             NotificationRecord old = null;
 
             int index = indexOfNotificationLocked(pkg, tag, id, userId);
