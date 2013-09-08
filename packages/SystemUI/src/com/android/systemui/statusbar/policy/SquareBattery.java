@@ -73,7 +73,8 @@ public class SquareBattery extends ImageView {
     private RectF   mRectLeft;      // contains the precalculated rect used in drawArc(), derived from mSquareHeight
     private Float   mTextLeftX;     // precalculated x position for drawText() to appear centered
     private Float   mTextY;         // precalculated y position for drawText() to appear vertical-centered
-    private Float   clevel;
+    private Float   cLevel;
+	private Float   mRectTop;
     // quiet a lot of paint variables. helps to move cpu-usage from actual drawing to initialization
     private Paint   mPaintFont;
 	private Paint   mPaintBatt;
@@ -238,10 +239,10 @@ public class SquareBattery extends ImageView {
         mPaintRed = new Paint(mPaintBatt);
 
         mPaintGray.setStrokeWidth(1);
-        mPaintSystem.setStrokeWidth(1);
-        mPaintRed.setStrokeWidth(1);
-
-        mPaintFont.setColor(mBatteryColor);
+        mPaintSystem.setStrokeWidth(0);
+        mPaintRed.setStrokeWidth(0);
+        mPaintTip.setStrokeWidth(1);
+        mPaintFont.setColor(mBatteryFColor);
         mPaintSystem.setColor(mBatteryColor);
         // could not find the darker definition anywhere in resources
         // do not want to use static 0x404040 color value. would break theming.
@@ -329,32 +330,30 @@ public class SquareBattery extends ImageView {
         if (unknownStatus) {
             usePaint = mPaintGray;
             internalLevel = 100; // Draw all the square;
-        } else if (internalLevel <= 15) {
+        } else if (internalLevel <= 14) {
             usePaint = mPaintRed;
         }
 
-      // 	RectF(float left, float top, float right, float bottom)
-     //     drawRect (float left, float top, float right, float bottom, Paint paint)
+        mRectTop = dRect.top;
 	 
-        // pad square percentage to 100% once it reaches 97%
-        // for one, the square looks odd with a too small gap,
-        // for another, some phones never reach 100% due to hardware design
-        int padLevel = internalLevel;
-        if (padLevel >= 97) {
-            padLevel = 100;
-        }
-        clevel = dRect.bottom - (dRect.bottom * (internalLevel * 0.01f)) + (mSquareHeight / 10.5f);
-        // draw thin gray ring first
-	//	canvas.drawRect(0, 0, 77, 77, mPaintGray);
-       // canvas.drawArc(drawRect, 270, 360, false, mPaintGray);
-        // draw colored arc representing charge level
-		canvas.drawRect(dRect.left + (mSquareWidth / 3f), dRect.top, dRect.right - (mSquareWidth / 3f), dRect.top + (mSquareHeight / 10.5f), mPaintTip);
-        // canvas.drawArc(drawRect, 270 + animOffset, 3.6f * padLevel, false, usePaint);
+        // Battery level display is calculated by subtracting the battery height by the
+		// percentage of the battery level of the battery height minus the battery tip.	 
+        cLevel = dRect.bottom - (dRect.bottom * (internalLevel * 0.01f)) + (mSquareHeight / 10.5f);
+         
+		canvas.drawRect(dRect.left + (mSquareWidth / 4f), dRect.top, dRect.right - (mSquareWidth / 4f), dRect.top + (mSquareHeight / 10.5f), mPaintTip);
+       
 		canvas.drawRect(dRect.left, dRect.top + (mSquareHeight / 10.5f), dRect.right, dRect.bottom, mPaintGray);
+		if (cLevel <= dRect.top + (mSquareHeight / 10.5f)) {
+		cLevel = dRect.top + (mSquareHeight / 10.5f);
+		} else if (cLevel >= dRect.bottom - (dRect.bottom * 0.15f)) {
+		cLevel = dRect.bottom - (dRect.bottom * 0.15f);
+		}
+		
+		
 		if (mIsAnimating == true) {
         canvas.drawRect(dRect.left + 1, animOffset, dRect.right - 1, dRect.bottom - 1, usePaint);
 		} else {
-		canvas.drawRect(dRect.left + 1, clevel, dRect.right - 1, dRect.bottom - 1, usePaint);
+		canvas.drawRect(dRect.left + 1, cLevel, dRect.right - 1, dRect.bottom - 1, usePaint);
 		}
 		
 	;
@@ -400,8 +399,8 @@ public class SquareBattery extends ImageView {
 
         mIsAnimating = true;
 
-        if (mAnimOffset < (mSquareHeight / 10.5f) + 1) {
-            mAnimOffset = Math.round(clevel);
+        if (mAnimOffset <= mRectTop + (mSquareHeight / 10.5f) + 1) {
+            mAnimOffset = Math.round(cLevel) + 1;
         } else {
             mAnimOffset = mAnimOffset - 1;
         }
@@ -429,8 +428,7 @@ public class SquareBattery extends ImageView {
         mPaintRed.setStrokeWidth(strokeWidth);
         mPaintSystem.setStrokeWidth(strokeWidth);
         mPaintGray.setStrokeWidth(strokeWidth / 3.5f);
-       // RectF(float left, float top, float right, float bottom)
-        // calculate rectangle for drawArc calls
+       
         int pLeft = getPaddingLeft();
         mRectLeft = new RectF(pLeft + strokeWidth / 2.0f, 0 + strokeWidth / 2.0f, mSquareWidth
                 - strokeWidth / 2.0f + pLeft, mSquareHeight - strokeWidth / 2.0f);
@@ -439,7 +437,7 @@ public class SquareBattery extends ImageView {
         Rect bounds = new Rect();
         mPaintFont.getTextBounds("99", 0, "99".length(), bounds);
         mTextLeftX = mSquareWidth / 2.0f + getPaddingLeft() - 1;
-        // the +1 at end of formular balances out rounding issues. works out on all resolutions
+        
         mTextY = mSquareHeight / 2.0f + (bounds.bottom - bounds.top) / 2.0f;
 
         // force new measurement for wrap-content xml tag
