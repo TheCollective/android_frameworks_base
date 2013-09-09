@@ -3060,6 +3060,42 @@ public final class Settings {
         public static final String STATUS_BAR_BRIGHTNESS_CONTROL = "status_bar_brightness_control";
 
         /**
+         * HALO being minimal.
+         * @hide
+         */
+        public static final String HALO_STYLE = "halo_style";
+
+        /**
+         * HALO colors
+         * @hide
+         */
+        public static final String HALO_COLORS = "halo_colors";
+
+        /**
+         * HALO speech bubble color
+         * @hide
+         */
+        public static final String HALO_BUBBLE_COLOR = "halo_bubble_color";
+
+        /**
+         * HALO speech bubble text color
+         * @hide
+         */
+        public static final String HALO_BUBBLE_TEXT_COLOR = "halo_bubble_text_color";
+
+        /**
+         * HALO effect color
+         * @hide
+         */
+        public static final String HALO_EFFECT_COLOR = "halo_effect_color";
+
+        /**
+         * HALO circle bg color
+         * @hide
+         */
+        public static final String HALO_CIRCLE_COLOR = "halo_circle_color";      
+
+        /**
          * Whether to show the IME switcher in the status bar
          * @hide
          */
