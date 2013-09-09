@@ -86,6 +86,9 @@ public class HaloProperties extends FrameLayout {
     private Drawable mHaloSilenceR;
     private Drawable mHaloMessage;
     private Drawable mHaloCurrentOverlay;
+    private Drawable mHaloIconMessage;
+    private Drawable mHaloIconPersistent;
+    private Drawable mHaloIconPinned;
 
     protected Drawable mHaloSpeechL, mHaloSpeechR, mHaloSpeechLD, mHaloSpeechRD;
 
@@ -96,8 +99,8 @@ public class HaloProperties extends FrameLayout {
     protected TextView mHaloTextView;
 
     protected View mHaloNumberView;
-    protected TextView mHaloNumber, mHaloCount;
-    protected ImageView mHaloNumberIcon, mHaloSystemIcon, mHaloPinned;
+    protected TextView mHaloNumber;
+    protected ImageView mHaloNumberIcon;
     protected RelativeLayout mHaloNumberContainer;
 
     private float mFraction = 1.0f;
@@ -134,6 +137,12 @@ public class HaloProperties extends FrameLayout {
         mHaloSpeechLD = mContext.getResources().getDrawable(R.drawable.halo_speech_l_d);
         mHaloSpeechRD = mContext.getResources().getDrawable(R.drawable.halo_speech_r_d);
 
+        mHaloIconMessage = mContext.getResources().getDrawable(R.drawable.halo_batch_message);
+        mHaloIconPersistent = mContext.getResources().getDrawable(R.drawable.halo_system_message);
+        mHaloIconPinned = mContext.getResources().getDrawable(R.drawable.halo_pinned_app);
+
+        mInflater = (LayoutInflater)mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
         mHaloBubble = mInflater.inflate(R.layout.halo_bubble, null);
         mHaloBg = (ImageView) mHaloBubble.findViewById(R.id.halo_bg);
         mHaloIcon = (ImageView) mHaloBubble.findViewById(R.id.app_icon);
@@ -150,13 +159,8 @@ public class HaloProperties extends FrameLayout {
         mHaloNumberView = mInflater.inflate(R.layout.halo_number, null);
         mHaloNumberContainer = (RelativeLayout)mHaloNumberView.findViewById(R.id.container);
         mHaloNumber = (TextView) mHaloNumberView.findViewById(R.id.number);
-        mHaloCount = (TextView) mHaloNumberView.findViewById(R.id.haloCount);
         mHaloNumberIcon = (ImageView) mHaloNumberView.findViewById(R.id.icon);
-        mHaloNumberIcon.setImageDrawable(mContext.getResources().getDrawable(R.drawable.halo_batch_message));
-        mHaloSystemIcon = (ImageView) mHaloNumberView.findViewById(R.id.system);
-        mHaloSystemIcon.setImageDrawable(mContext.getResources().getDrawable(R.drawable.halo_system_message));
-        mHaloPinned = (ImageView) mHaloNumberView.findViewById(R.id.pinned);
-        mHaloPinned.setImageDrawable(mContext.getResources().getDrawable(R.drawable.halo_pinned_app));
+        mHaloNumberIcon.setImageDrawable(mHaloIconMessage);
 
         mHaloContentHeight = mContext.getResources().getDimensionPixelSize(R.dimen.notification_min_height);
 
@@ -187,24 +191,23 @@ public class HaloProperties extends FrameLayout {
         newPaddingVTop = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_speech_vpadding_top) * fraction);
         newPaddingVBottom = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_speech_vpadding_bottom) * fraction);        
 
-        final int newNumberSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_number_size) * fraction);
-        final int newNumberTextSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_number_text_size) * fraction);
-        RelativeLayout.LayoutParams layoutParams2 = new RelativeLayout.LayoutParams(newNumberSize, newNumberSize);
-        mHaloNumber.setLayoutParams(layoutParams2);
-        mHaloNumber.setTextSize(TypedValue.COMPLEX_UNIT_PX, newNumberTextSize);
-        mHaloCount.setLayoutParams(layoutParams2);
-        mHaloCount.setTextSize(TypedValue.COMPLEX_UNIT_PX, newNumberTextSize);
-
-        //final int newSpeechTextSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_speech_text_size) * fraction);
-        //mHaloTextView.setTextSize(TypedValue.COMPLEX_UNIT_PX, newSpeechTextSize);
-
+        final int newBatchSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_number_size) * fraction);
         final int newBatchIconSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_number_icon_size) * fraction);
-        RelativeLayout.LayoutParams layoutParams3 = new RelativeLayout.LayoutParams(newBatchIconSize, newBatchIconSize);
+        final int newNumberTextSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_number_text_size) * fraction);
+
+        LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(newBatchSize, newBatchSize);
+        mHaloNumberContainer.setLayoutParams(layoutParams2);
+
+        RelativeLayout.LayoutParams layoutParams3 = new RelativeLayout.LayoutParams(newBatchSize, newBatchSize);
         layoutParams3.addRule(RelativeLayout.CENTER_VERTICAL);
         layoutParams3.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        mHaloNumberIcon.setLayoutParams(layoutParams3);
-        mHaloSystemIcon.setLayoutParams(layoutParams3);
-        mHaloPinned.setLayoutParams(layoutParams3);
+        mHaloNumber.setLayoutParams(layoutParams3);
+        mHaloNumber.setTextSize(TypedValue.COMPLEX_UNIT_PX, newNumberTextSize);
+
+        RelativeLayout.LayoutParams layoutParams4 = new RelativeLayout.LayoutParams(newBatchIconSize, newBatchIconSize);
+        layoutParams4.addRule(RelativeLayout.CENTER_VERTICAL);
+        layoutParams4.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        mHaloNumberIcon.setLayoutParams(layoutParams4);
 
         updateResources(mLastContentStateLeft);
         updateColorView();
@@ -250,30 +253,30 @@ public class HaloProperties extends FrameLayout {
                     msgNumberAlphaAnimator.cancel(true);
                     float oldAlpha = mHaloNumberContainer.getAlpha();
 
+                    mHaloNumberContainer.getBackground().clearColorFilter();
                     mHaloNumberContainer.setAlpha(1f);
-                    mHaloNumber.setAlpha(1f);
-                    mHaloCount.setAlpha(0f);
-                    mHaloCount.setText("");
+                    mHaloNumber.setAlpha(0f);
                     mHaloNumberIcon.setAlpha(0f);
-                    mHaloSystemIcon.setAlpha(0f);
-                    mHaloPinned.setAlpha(0f);
+
                     if (msgCount > 0) {
-                        mHaloNumber.setAlpha(0f);
-                        mHaloCount.setText(String.valueOf(msgCount));
-                        mHaloCount.setAlpha(1f);
+                        mHaloNumberContainer.getBackground().setColorFilter(0xff4fa736, PorterDuff.Mode.SRC_IN);
+                        mHaloNumber.setText(String.valueOf(msgCount));
+                        mHaloNumber.setAlpha(1f);
                     } else if (value < 1 && msgCount < 1) {
-                        mHaloNumber.setText("");
                         if (msgType == MessageType.PINNED) {
-                            mHaloPinned.setAlpha(1f);
+                            mHaloNumberIcon.setImageDrawable(mHaloIconPinned);
                         } else if (msgType == MessageType.SYSTEM) {
-                            mHaloSystemIcon.setAlpha(1f);
+                            mHaloNumberIcon.setImageDrawable(mHaloIconPersistent);
                         } else {
-                            mHaloNumberIcon.setAlpha(1f);
+                            mHaloNumberIcon.setImageDrawable(mHaloIconMessage);
                         }
+                        mHaloNumberIcon.setAlpha(1f);
                     } else if (value < 100) {
                         mHaloNumber.setText(String.valueOf(value));
+                        mHaloNumber.setAlpha(1f);
                     } else {
                         mHaloNumber.setText("+");
+                        mHaloNumber.setAlpha(1f);
                     }
                     
                     if (value < 1 && msgCount < 1) {
@@ -294,13 +297,12 @@ public class HaloProperties extends FrameLayout {
     }
 
     void setHaloMessageNumber(int count) {
-        mHaloCount.setText(String.valueOf(count));
+        mHaloNumber.setText(String.valueOf(count));
         invalidate();
     }
 
     public void setHaloContentAlpha(float value) {
         mHaloTickerWrapper.setAlpha(value);
-        mHaloTextView.setTextColor(mHaloTextView.getTextColors().withAlpha((int)(value * 255)));
         mHaloTickerWrapper.invalidate();
         mHaloContentAlpha = value;
     }
@@ -361,7 +363,7 @@ public class HaloProperties extends FrameLayout {
 
     private ContentStyle mLastContentStyle = ContentStyle.CONTENT_NONE;
     public void setHaloContentBackground(boolean contentLeft, ContentStyle style) {
-        if (style != mLastContentStyle) {
+        if (contentLeft != mLastContentStateLeft || style != mLastContentStyle) {
             // Set background
             switch(style) {
                 case CONTENT_UP:
@@ -388,8 +390,15 @@ public class HaloProperties extends FrameLayout {
     }
 
     public void updateResources(boolean contentLeft) {
+
+        // Maximal stretch for speech bubble, wrap_content regular text
+        final boolean portrait = getWidth() < getHeight();
+        final int iconSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_bubble_size) * mFraction);
+        int portraitWidth = portrait ? ((int)(getWidth() * 0.95f) - iconSize) : ((int)(getHeight() * 0.95f));
+        if (mHaloTextView.getVisibility() == View.VISIBLE) portraitWidth = LinearLayout.LayoutParams.WRAP_CONTENT;
+
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, mHaloContentHeight);
+                portraitWidth, mHaloContentHeight);
         mHaloTickerWrapper.setLayoutParams(layoutParams);
 
         // Set background and override its padding
@@ -407,21 +416,6 @@ public class HaloProperties extends FrameLayout {
         mHaloNumberView.measure(MeasureSpec.getSize(mHaloNumberView.getMeasuredWidth()),
                 MeasureSpec.getSize(mHaloNumberView.getMeasuredHeight()));
         mHaloNumberView.layout(0, 0, 0, 0);
-
-        // Maximal stretch for speech bubble
-        final int iconSize = (int)(mContext.getResources().getDimensionPixelSize(R.dimen.halo_bubble_size) * mFraction);
-        final int maximumWidth = (int)(getWidth() * 0.95f) - iconSize;
-
-        if (mHaloTickerWrapper.getMeasuredWidth() > maximumWidth) {
-            final int optimalWidth = iconSize * 5;
-            final int newSize = maximumWidth > optimalWidth ? optimalWidth : maximumWidth;        
-            layoutParams = new LinearLayout.LayoutParams(newSize, mHaloContentHeight);
-            mHaloTickerWrapper.setLayoutParams(layoutParams);
-
-            mHaloContentView.measure(MeasureSpec.getSize(mHaloContentView.getMeasuredWidth()),
-                    MeasureSpec.getSize(mHaloContentView.getMeasuredHeight()));
-            mHaloContentView.layout(0, 0, 0, 0);
-        }
 
         mLastContentStateLeft = contentLeft;
     }
