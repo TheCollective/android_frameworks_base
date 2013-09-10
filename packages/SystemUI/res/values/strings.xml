@@ -55,6 +55,9 @@
     <!-- Title shown in recents popup for inspecting an application's properties -->
     <string name="status_bar_recent_inspect_item_title">App info</string>
 
+    <!-- Title shown in recents popup for showing app in floating mode -->
+    <string name="status_bar_recent_floating_item_title">Floating mode</string>
+
     <!-- Message shown in the middle of the screen after clicking on the recent apps button
          when there are no recent apps to show. Also used for accessibility. [CHAR LIMIT=45]-->
     <string name="status_bar_no_recent_apps">No recent apps</string>
@@ -443,6 +446,9 @@
     <!-- Notification text: when GPS has found a fix [CHAR LIMIT=50] -->
     <string name="gps_notification_found_text">Location set by GPS</string>
 
+    <!-- Content description of the halo button in the notification panel for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
+    <string name="accessibility_halo">Create notification halo.</string>
+
     <!-- Content description of the clear button in the notification panel for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
     <string name="accessibility_clear_all">Clear all notifications.</string>
 
@@ -652,9 +658,19 @@
 
     <!-- App sidebar -->
     <string name="default_folder_text">Folder</string>
-    <string name="title_activity_sidebar_configuration">\@ppbar content setup</string>
+    <string name="title_activity_sidebar_configuration">\Appbar content setup</string>
     <string name="action_save">Save</string>
-    <string name="toast_items_saved">\@ppbar items have been saved.</string>
-    <string name="content_setup_instructions">Add items to the \@ppbar by long pressing any item on the right and drag it over to the \@ppbar.\n\nCombine items into folders by droping an item onto any existing item in the \@ppbar.\n\nTo remove an item simply drag it out of the \@appbar.</string>
+    <string name="toast_items_saved">\Appbar items have been saved.</string>
+    <string name="content_setup_instructions">Add items to the \Appbar by long pressing any item on the right and drag it over to the \Appbar.\n\nCombine items into folders by droping an item onto any existing item in the \Appbar.\n\nTo remove an item simply drag it out of the \@appbar.</string>
     <string name="content_setup_dismiss">Continue</string>
+
+    <!-- Halo -->
+    <string name="halo_dismiss">Dismiss notification</string>
+    <string name="halo_hide">Hide</string>
+    <string name="halo_clear_all">Dismiss all notifications</string>
+    <string name="halo_silence">Hide &amp; silence until woken</string>
+    <string name="halo_tutorial1">This is HALO</string>
+    <string name="halo_tutorial2">Move me: 2x-tap &amp; drag</string>
+    <string name="halo_tutorial3">Browse tasks: Horizontal drag</string>
+
 </resources>
