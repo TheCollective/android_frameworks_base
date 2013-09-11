@@ -2949,8 +2949,27 @@ public final class Settings {
          * @hide
          */
         public static final String STATUSBAR_BATTERY_FCOLOR = "statusbar_battery_fcolor";
+         /**
+         * Setting for statusbar background color
+         * @hide
+         */
+        public static final String STATUSBAR_CUSTOM_COLOR = "statusbar_custom_color";
 
+  
+        
+		/**
+         * Setting for statusbar background 
+         * @hide
+         */
+        public static final String STATUSBAR_BACKGROUND = "statusbar_background";
 
+        /**
+         * Setting for statusbar background alpha
+         * @hide
+         */
+        public static final String STATUSBAR_BACKGROUND_ALPHA = "statusbar_background_alpha";
+
+   
         /**
          * Shows weekday before clock time
          * 0 - No Day

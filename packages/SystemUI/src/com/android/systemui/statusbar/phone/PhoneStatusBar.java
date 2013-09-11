@@ -515,6 +515,8 @@ public class PhoneStatusBar extends BaseStatusBar {
             }});
 
         mStatusBarView = (PhoneStatusBarView) mStatusBarWindow.findViewById(R.id.status_bar);
+        setStatusbarBackgroundHelper();
+ 
         mStatusBarView.setBar(this);
         
 
@@ -3208,7 +3210,10 @@ public class PhoneStatusBar extends BaseStatusBar {
 		    cr.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.NOTIF_ALPHA),
                     false, this, UserHandle.USER_ALL);
-					
+			
+			cr.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUSBAR_BACKGROUND_ALPHA),
+                    false, this, UserHandle.USER_ALL);		
         }
     }
 
@@ -3241,6 +3246,30 @@ public class PhoneStatusBar extends BaseStatusBar {
             }
         }
     }
+
+    private void setStatusbarBackgroundHelper() {
+		
+	  float statusbarAlpha = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.STATUSBAR_BACKGROUND_ALPHA, 0.0f);
+      int statusbarBack = Settings.System.getInt(mContext.getContentResolver(), Settings.System.STATUSBAR_BACKGROUND, 0);
+	  int statusbarColor = Settings.System.getInt(mContext.getContentResolver(), Settings.System.STATUSBAR_CUSTOM_COLOR, -16514044);
+        
+      mStatusBarView.setBackgroundResource(0);
+	  
+	  
+	  if (statusbarBack == 0) {
+		mStatusBarView.setBackgroundResource(R.drawable.status_bar_background);
+        } else {
+		mStatusBarView.setBackgroundColor(statusbarColor);
+		}
+	
+	Drawable statusbarbackground = mStatusBarView.getBackground();
+	
+	statusbarbackground.setAlpha(0);
+    
+	 statusbarbackground.setAlpha((int) ((1-statusbarAlpha) * 255));
+	 
+    }
+
 	public void updateSettings() {
         ContentResolver cr = mStatusBarView.getContext().getContentResolver();
 
@@ -3261,7 +3290,7 @@ public class PhoneStatusBar extends BaseStatusBar {
 
         setNotificationWallpaperHelper();
         setNotificationAlphaHelper();
-   
+        setStatusbarBackgroundHelper();
 
       
         
