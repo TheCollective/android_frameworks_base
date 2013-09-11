@@ -74,6 +74,7 @@ public class SquareBattery extends ImageView {
     private Float   mTextLeftX;     // precalculated x position for drawText() to appear centered
     private Float   mTextY;         // precalculated y position for drawText() to appear vertical-centered
     private Float   cLevel;
+	private Float   mRectTop;
 
     // quiet a lot of paint variables. helps to move cpu-usage from actual drawing to initialization
     private Paint   mPaintFont;
@@ -333,8 +334,8 @@ public class SquareBattery extends ImageView {
         } else if (internalLevel <= 14) {
             usePaint = mPaintRed;
         }
-
-      
+		
+		  mRectTop = dRect.top;
 	 
         // Battery level display is calculated by subtracting the battery height by the
 		// percentage of the battery level of the battery height minus the battery tip.	 
