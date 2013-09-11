@@ -2537,7 +2537,7 @@ public final class WebViewCore {
             }
         }
 
-         // adjust the default scale to match the densityDpi
+        // adjust the default scale to match the densityDpi
         float adjust = 1.0f;
         if (mViewportDensityDpi == -1) {
             if( mWebViewClassic != null && mWebViewClassic.getDefaultZoomScale() *
