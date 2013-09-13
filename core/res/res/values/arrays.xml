@@ -41,6 +41,13 @@
        <item>@drawable/btn_check_on_pressed_holo_dark</item>
        <item>@drawable/btn_check_on_holo_light</item>
        <item>@drawable/btn_check_on_holo_dark</item>
+       <item>@drawable/btn_check_on_holo_dark1</item>
+       <item>@drawable/btn_check_on_holo_dark2</item>
+       <item>@drawable/btn_check_on_holo_dark3</item>
+       <item>@drawable/btn_check_on_holo_dark4</item>
+       <item>@drawable/btn_check_on_holo_dark5</item>
+       <item>@drawable/btn_check_on_holo_dark6</item>
+       <item>@drawable/btn_check_on_holo_dark7</item>
        <item>@drawable/btn_check_on_focused_holo_light</item>
        <item>@drawable/btn_check_on_focused_holo_dark</item>
        <item>@drawable/btn_check_on_disabled_holo_light</item>
@@ -59,6 +66,7 @@
        <item>@drawable/btn_check_off_disabled_focused_holo_dark</item>
        <item>@drawable/btn_check_holo_light</item>
        <item>@drawable/btn_check_holo_dark</item>
+       <item>@drawable/btn_check_on_animation</item>
        <item>@drawable/btn_radio_on_pressed_holo_light</item>
        <item>@drawable/btn_radio_on_pressed_holo_dark</item>
        <item>@drawable/btn_radio_on_holo_light</item>
