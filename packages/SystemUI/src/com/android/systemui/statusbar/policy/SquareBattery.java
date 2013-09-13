@@ -75,6 +75,7 @@ public class SquareBattery extends ImageView {
     private Float   mTextY;         // precalculated y position for drawText() to appear vertical-centered
     private Float   cLevel;
 	private Float   mRectTop;
+    private Float   strokeWidth = 1f;
     // quiet a lot of paint variables. helps to move cpu-usage from actual drawing to initialization
     private Paint   mPaintFont;
 	private Paint   mPaintBatt;
@@ -333,12 +334,12 @@ public class SquareBattery extends ImageView {
         } else if (internalLevel <= 14) {
             usePaint = mPaintRed;
         }
-
-        mRectTop = dRect.top;
+		
+		  mRectTop = dRect.top;
 	 
         // Battery level display is calculated by subtracting the battery height by the
 		// percentage of the battery level of the battery height minus the battery tip.	 
-        cLevel = dRect.bottom - (dRect.bottom * (internalLevel * 0.01f)) + (mSquareHeight / 10.5f);
+        cLevel = mSquareHeight - (mSquareHeight * (internalLevel * 0.01f)) + (mSquareHeight / 10.5f);
          
 		canvas.drawRect(dRect.left + (mSquareWidth / 4f), dRect.top, dRect.right - (mSquareWidth / 4f), dRect.top + (mSquareHeight / 10.5f), mPaintTip);
        
@@ -351,9 +352,9 @@ public class SquareBattery extends ImageView {
 		
 		
 		if (mIsAnimating == true) {
-        canvas.drawRect(dRect.left + 1, animOffset, dRect.right - 1, dRect.bottom - 1, usePaint);
+        canvas.drawRect(dRect.left + strokeWidth, animOffset, dRect.right - strokeWidth, dRect.bottom - strokeWidth, usePaint);
 		} else {
-		canvas.drawRect(dRect.left + 1, cLevel, dRect.right - 1, dRect.bottom - 1, usePaint);
+		canvas.drawRect(dRect.left + strokeWidth, cLevel, dRect.right - strokeWidth, dRect.bottom - strokeWidth, usePaint);
 		}
 		
 	;
@@ -399,8 +400,8 @@ public class SquareBattery extends ImageView {
 
         mIsAnimating = true;
 
-        if (mAnimOffset <= mRectTop + (mSquareHeight / 10.5f) + 1) {
-            mAnimOffset = Math.round(cLevel) + 1;
+        if (mAnimOffset <= mRectTop + (mSquareHeight / 10.5f) + strokeWidth) {
+            mAnimOffset = Math.round(cLevel + strokeWidth);
         } else {
             mAnimOffset = mAnimOffset - 1;
         }
@@ -424,14 +425,13 @@ public class SquareBattery extends ImageView {
 
         mPaintFont.setTextSize(mSquareHeight / 2f);
 
-        float strokeWidth = mSquareHeight / 6.5f;
-        mPaintRed.setStrokeWidth(strokeWidth);
-        mPaintSystem.setStrokeWidth(strokeWidth);
-        mPaintGray.setStrokeWidth(strokeWidth / 3.5f);
+        
+        
+        mPaintGray.setStrokeWidth(strokeWidth);
        
         int pLeft = getPaddingLeft();
-        mRectLeft = new RectF(pLeft + strokeWidth / 2.0f, 0 + strokeWidth / 2.0f, mSquareWidth
-                - strokeWidth / 2.0f + pLeft, mSquareHeight - strokeWidth / 2.0f);
+        mRectLeft = new RectF(pLeft + strokeWidth, 0 + strokeWidth, mSquareWidth
+                - strokeWidth + pLeft, mSquareHeight - strokeWidth);
 
         // calculate Y position for text
         Rect bounds = new Rect();
