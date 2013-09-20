@@ -178,6 +178,7 @@ public class EthernetDataTracker implements NetworkStateTracker {
                 }
                 mLinkProperties = dhcpResults.linkProperties;
 
+                mNetworkInfo.setIsAvailable(true);
                 mNetworkInfo.setDetailedState(DetailedState.CONNECTED, null, mHwAddr);
                 Message msg = mCsHandler.obtainMessage(EVENT_STATE_CHANGED, mNetworkInfo);
                 msg.sendToTarget();
@@ -276,6 +277,11 @@ public class EthernetDataTracker implements NetworkStateTracker {
 
     @Override
     public void captivePortalCheckComplete() {
+        // not implemented
+    }
+
+    @Override
+    public void captivePortalCheckCompleted(boolean isCaptivePortal) {
         // not implemented
     }
 
