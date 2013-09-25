@@ -103,7 +103,6 @@ import com.android.systemui.statusbar.phone.Ticker;
 import java.util.ArrayList;
 import java.util.Locale;
 
-
 public abstract class BaseStatusBar extends SystemUI implements
         CommandQueue.Callbacks {
     public static final String TAG = "StatusBar";
@@ -473,7 +472,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         }
     }
 
-    protected void restartHalo() {
+    public void restartHalo() {
         if (mHalo != null) {
             mHalo.cleanUp();
             mWindowManager.removeView(mHalo);
@@ -483,7 +482,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         updateHalo();
     }
 
-    protected void updateHalo() {
+    public void updateHalo() {
         mHaloEnabled = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.HALO_ENABLED, 0) == 1;
         mHaloActive = Settings.System.getInt(mContext.getContentResolver(),
