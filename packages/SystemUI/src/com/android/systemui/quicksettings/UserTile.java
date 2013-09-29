@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.util.TypedValue;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -18,12 +19,14 @@ import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Profile;
 import android.util.Log;
 import android.util.Pair;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManagerGlobal;
 import android.widget.ImageView;
 import android.widget.TextView;
-
+import android.provider.Settings;
+import android.content.res.Resources;
 import com.android.systemui.R;
 import com.android.systemui.statusbar.phone.QuickSettingsContainerView;
 import com.android.systemui.statusbar.phone.QuickSettingsController;
@@ -33,6 +36,10 @@ public class UserTile extends QuickSettingsTile {
     private static final String TAG = "UserTile";
     private Drawable userAvatar;
     private AsyncTask<Void, Void, Pair<String, Drawable>> mUserInfoTask;
+    private int mNumColumns;
+	private int mTileTextSize;
+    private int mTileTextPadding;
+    private int mTileTextColor;
 
     public UserTile(Context context, QuickSettingsController qsc) {
         super(context, qsc, R.layout.quick_settings_tile_user);
@@ -78,9 +85,14 @@ public class UserTile extends QuickSettingsTile {
 
     @Override
     void updateQuickSettings() {
+    	getTiles();
         ImageView iv = (ImageView) mTile.findViewById(R.id.user_imageview);
         TextView tv = (TextView) mTile.findViewById(R.id.user_textview);
         tv.setText(mLabel);
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, mTileTextSize);
+            if (mTileTextColor != -2) {
+                tv.setTextColor(mTileTextColor);
+            }
         iv.setImageDrawable(userAvatar);
     }
 
@@ -153,7 +165,47 @@ public class UserTile extends QuickSettingsTile {
         };
         mUserInfoTask.execute();
     }
+   private void getTiles() {
+	mNumColumns = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.QUICK_TILES_PER_ROW, 3);
+	mTileTextPadding = getTileTextPadding();
+	mTileTextColor = getTileTextColor();
+	mTileTextSize = getTileTextSize();
+	}
+	
+    private int getTileTextPadding() {
+        // get tile text padding based on column count
+		final Resources res = mContext.getResources();
+        switch (mNumColumns) {
+            case 5:
+                return res.getDimensionPixelSize(R.dimen.qs_5_column_text_padding);
+            case 4:
+                return res.getDimensionPixelSize(R.dimen.qs_4_column_text_padding);
+            case 3:
+            default:
+                return res.getDimensionPixelSize(R.dimen.qs_tile_margin_below_icon);
+        }
+    }
 
+    private int getTileTextColor() {
+        int tileTextColor = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.QUICK_TILES_TEXT_COLOR, -2);
+
+        return tileTextColor;
+    }
+     private int getTileTextSize() {
+	 final Resources res = mContext.getResources();
+        // get tile text size based on column count
+        switch (mNumColumns) {
+            case 5:
+                return res.getDimensionPixelSize(R.dimen.qs_5_column_text_size);
+            case 4:
+                return res.getDimensionPixelSize(R.dimen.qs_4_column_text_size);
+            case 3:
+            default:
+                return res.getDimensionPixelSize(R.dimen.qs_3_column_text_size);
+        }
+    }
     void setUserTileInfo(String name, Drawable avatar) {
         mLabel = name;
         userAvatar = avatar;

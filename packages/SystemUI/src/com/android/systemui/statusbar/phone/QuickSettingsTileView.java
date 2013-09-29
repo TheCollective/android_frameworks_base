@@ -17,11 +17,14 @@
 package com.android.systemui.statusbar.phone;
 
 import android.content.Context;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.FrameLayout;
-
+import com.android.systemui.R;
 /**
  *
  */
@@ -30,11 +33,41 @@ public class QuickSettingsTileView extends FrameLayout {
     private int mColSpan;
     private final int mRowSpan;
 
+    private static final int DEFAULT_QUICK_TILES_BG_COLOR = 0xff161616;
+    private static final int DEFAULT_QUICK_TILES_BG_PRESSED_COLOR = 0xff212121;
+
     public QuickSettingsTileView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
         mColSpan = 1;
         mRowSpan = 1;
+		int customBgColor = Settings.System.getInt(context.getContentResolver(),
+                Settings.System.QUICK_TILES_CUSTOM_BG_COLOR, 0);
+        this.setBackgroundResource(0);
+		if (customBgColor == 0) {
+		this.setBackgroundResource(R.drawable.qs_tile_background);
+		} else {
+		
+        int bgColor = Settings.System.getInt(context.getContentResolver(),
+                Settings.System.QUICK_TILES_BG_COLOR, -2);
+        int presColor = Settings.System.getInt(context.getContentResolver(),
+                Settings.System.QUICK_TILES_BG_PRESSED_COLOR, -2);
+
+        if (bgColor != -2 || presColor != -2) {
+            if (bgColor == -2) {
+                bgColor = DEFAULT_QUICK_TILES_BG_COLOR;
+            }
+            if (presColor == -2) {
+                presColor = DEFAULT_QUICK_TILES_BG_COLOR;
+            }
+            ColorDrawable bgDrawable = new ColorDrawable(bgColor);
+            ColorDrawable presDrawable = new ColorDrawable(presColor);
+            StateListDrawable states = new StateListDrawable();
+            states.addState(new int[] {android.R.attr.state_pressed}, presDrawable);
+            states.addState(new int[] {}, bgDrawable);
+            this.setBackground(states);
+        }
+	  }	
     }
 
     void setColumnSpan(int span) {

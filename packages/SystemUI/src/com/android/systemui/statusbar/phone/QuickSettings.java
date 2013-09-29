@@ -37,6 +37,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.util.TypedValue;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
@@ -107,6 +108,10 @@ class QuickSettings {
     boolean mUseDefaultAvatar = false;
 
     private Handler mHandler;
+
+    private int mTileTextSize;
+    private int mTileTextColor;
+	private int mTileTextPadding;
 
     // The set of QuickSettingsTiles that have dynamic spans (and need to be updated on
     // configuration change)
@@ -251,6 +256,9 @@ class QuickSettings {
 
     private void setupQuickSettings() {
         // Setup the tiles that we are going to be showing (including the temporary ones)
+        mTileTextSize = ((QuickSettingsContainerView) mContainerView).getTileTextSize();
+        mTileTextColor = ((QuickSettingsContainerView) mContainerView).getTileTextColor();
+        mTileTextPadding = ((QuickSettingsContainerView) mContainerView).getTileTextPadding();
         LayoutInflater inflater = LayoutInflater.from(mContext);
 
         addUserTiles(mContainerView, inflater);
@@ -316,6 +324,11 @@ class QuickSettings {
                 ImageView iv = (ImageView) view.findViewById(R.id.user_imageview);
                 TextView tv = (TextView) view.findViewById(R.id.user_textview);
                 tv.setText(state.label);
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, mTileTextSize);
+                tv.setPadding(0, mTileTextPadding, 0, 0);
+                if (mTileTextColor != -2) {
+                    tv.setTextColor(mTileTextColor);
+                }
                 iv.setImageDrawable(us.avatar);
                 view.setContentDescription(mContext.getString(
                         R.string.accessibility_quick_settings_user, state.label));
@@ -339,26 +352,6 @@ class QuickSettings {
                 new QuickSettingsModel.BasicRefreshCallback(brightnessTile));
         parent.addView(brightnessTile);
         mDynamicSpannedTiles.add(brightnessTile);
-
-        // Time tile
-        /*
-        QuickSettingsTileView timeTile = (QuickSettingsTileView)
-                inflater.inflate(R.layout.quick_settings_tile, parent, false);
-        timeTile.setContent(R.layout.quick_settings_tile_time, inflater);
-        timeTile.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Quick. Clock. Quick. Clock. Quick. Clock.
-                startSettingsActivity(Intent.ACTION_QUICK_CLOCK);
-            }
-        });
-        mModel.addTimeTile(timeTile, new QuickSettingsModel.RefreshCallback() {
-            @Override
-            public void refreshView(QuickSettingsTileView view, State alarmState) {}
-        });
-        parent.addView(timeTile);
-        mDynamicSpannedTiles.add(timeTile);
-        */
 
         // Settings tile
         final QuickSettingsBasicTile settingsTile = new QuickSettingsBasicTile(mContext);
@@ -455,6 +448,11 @@ class QuickSettings {
                         iov.setImageDrawable(null);
                     }
                     tv.setText(state.label);
+                    tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, mTileTextSize);
+                    tv.setPadding(0, mTileTextPadding, 0, 0);
+                    if (mTileTextColor != -2) {
+                       tv.setTextColor(mTileTextColor);
+                    }
                     view.setContentDescription(mContext.getResources().getString(
                             R.string.accessibility_quick_settings_mobile,
                             rssiState.signalContentDescription, rssiState.dataContentDescription,
@@ -688,22 +686,6 @@ class QuickSettings {
             }
         });
         parent.addView(bugreportTile);
-        /*
-        QuickSettingsTileView mediaTile = (QuickSettingsTileView)
-                inflater.inflate(R.layout.quick_settings_tile, parent, false);
-        mediaTile.setContent(R.layout.quick_settings_tile_media, inflater);
-        parent.addView(mediaTile);
-        QuickSettingsTileView imeTile = (QuickSettingsTileView)
-                inflater.inflate(R.layout.quick_settings_tile, parent, false);
-        imeTile.setContent(R.layout.quick_settings_tile_ime, inflater);
-        imeTile.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                parent.removeViewAt(0);
-            }
-        });
-        parent.addView(imeTile);
-        */
     }
 
     void updateResources() {
