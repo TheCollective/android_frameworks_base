@@ -538,4 +538,20 @@ public class AppOpsManager {
     public void finishOp(int op) {
         finishOp(op, Process.myUid(), mContext.getBasePackageName());
     }
+
+    public boolean getPrivacyGuardSettingForPackage(int uid, String packageName) {
+        try {
+            return mService.getPrivacyGuardSettingForPackage(uid, packageName);
+        } catch (RemoteException e) {
+        }
+        return false;
+    }
+
+    public void setPrivacyGuardSettingForPackage(int uid, String packageName,
+            boolean state) {
+        try {
+            mService.setPrivacyGuardSettingForPackage(uid, packageName, state);
+        } catch (RemoteException e) {
+        }
+    }
 }

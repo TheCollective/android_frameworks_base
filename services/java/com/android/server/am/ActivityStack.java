@@ -29,6 +29,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.AppGlobals;
+import android.app.AppOpsManager;
 import android.app.IActivityManager;
 import android.app.IThumbnailRetriever;
 import android.app.IApplicationThread;
@@ -1850,14 +1851,8 @@ final class ActivityStack {
             return;
         }
 
-        boolean privacy = false;
-
-        try {
-            privacy = AppGlobals.getPackageManager().getPrivacyGuardSetting(
-                    next.packageName, next.userId);
-        } catch (RemoteException e) {
-            // nothing
-        }
+        boolean privacy = mService.mAppOpsService.getPrivacyGuardSettingForPackage(
+                next.app.uid, next.packageName);
 
         if (mPrivacyGuardPackageName != null && !privacy) {
             Message msg = mService.mHandler.obtainMessage(

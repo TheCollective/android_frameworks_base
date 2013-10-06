@@ -65,6 +65,7 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
 
     private static final String NAME_H2W = "h2w";
     private static final String NAME_USB_AUDIO = "usb_audio";
+    private static final String NAME_EMU_AUDIO = "semu_audio";
     private static final String NAME_HDMI_AUDIO = "hdmi_audio";
     private static final String NAME_HDMI = "hdmi";
 
@@ -78,8 +79,6 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
     private int mHeadsetState;
 
     private int mSwitchValues;
-
-    private boolean dockAudioEnabled = false;
 
     private final WiredAccessoryObserver mObserver;
     private final InputManagerService mInputManager;
@@ -98,12 +97,6 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
 
         mObserver = new WiredAccessoryObserver();
 
-        File f = new File("/sys/class/switch/dock/state");
-        if (f!=null && f.exists()) {
-            // Listen out for changes to the Dock Audio Settings
-            context.registerReceiver(new SettingsChangedReceiver(),
-            new IntentFilter("com.cyanogenmod.settings.SamsungDock"), null, null);
-        }
         context.registerReceiver(new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context ctx, Intent intent) {
@@ -111,23 +104,6 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
                     }
                 },
                 new IntentFilter(Intent.ACTION_BOOT_COMPLETED), null, null);
-    }
-
-    private final class SettingsChangedReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            Slog.e(TAG, "Recieved a Settings Changed Action " + action);
-            if (action.equals("com.cyanogenmod.settings.SamsungDock")) {
-                String data = intent.getStringExtra("data");
-                Slog.e(TAG, "Recieved a Dock Audio change " + data);
-                if (data != null && data.equals("1")) {
-                    dockAudioEnabled = true;
-                } else {
-                    dockAudioEnabled = false;
-                }
-            }
-        }
     }
 
     private void bootCompleted() {
@@ -380,6 +356,14 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
                 Slog.w(TAG, "This kernel does not have usb audio support");
             }
 
+            // Monitor Motorola EMU audio jack
+            uei = new UEventInfo(NAME_EMU_AUDIO, BIT_USB_HEADSET_ANLG, 0);
+            if (uei.checkSwitchExists()) {
+                retVal.add(uei);
+            } else {
+                Slog.w(TAG, "This kernel does not have Motorola EMU audio support");
+            }
+
             // Monitor Samsung USB audio
             uei = new UEventInfo("dock", BIT_USB_HEADSET_DGTL, BIT_USB_HEADSET_ANLG);
             if (uei.checkSwitchExists()) {
@@ -419,15 +403,11 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
             try {
                 String devPath = event.get("DEVPATH");
                 String name = event.get("SWITCH_NAME");
-                if (name.equals("dock")) {
-                    // Samsung USB Audio Jack is non-sensing - so must be enabled manually
-                    // The choice is made in the GalaxyS2Settings.apk
-                    // device/samsung/i9100/DeviceSettings/src/com/cyanogenmod/settings/device/DockFragmentActivity.java
-                    // This sends an Intent to this class
-                    if ((!dockAudioEnabled) && (state > 0)) {
-                        Slog.e(TAG, "Ignoring dock event as Audio routing disabled " + event);
-                        return;
-                    }
+                if (name.equals("CAR") || name.equals("DESK")) {
+                    // Motorola dock - ignore this event and don't change
+                    // the audio routing just because we're docked.
+                    // Let only the dock emu audio jack sensing do that.
+                    return;
                 }
                 synchronized (mLock) {
                     updateStateLocked(devPath, name, state);

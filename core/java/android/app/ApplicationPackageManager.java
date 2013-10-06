@@ -1310,25 +1310,6 @@ final class ApplicationPackageManager extends PackageManager {
         return PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
     }
 
-    @Override
-    public void setPrivacyGuardSetting(String packageName, boolean enabled) {
-        try {
-            mPM.setPrivacyGuardSetting(packageName, enabled, mContext.getUserId());
-        } catch (RemoteException e) {
-            // Should never happen!
-        }
-    }
-
-    @Override
-    public boolean getPrivacyGuardSetting(String packageName) {
-        try {
-            return mPM.getPrivacyGuardSetting(packageName, mContext.getUserId());
-        } catch (RemoteException e) {
-            // Should never happen!
-        }
-        return false;
-    }
-
     /**
      * @hide
      */
