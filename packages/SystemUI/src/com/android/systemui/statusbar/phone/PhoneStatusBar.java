@@ -281,7 +281,6 @@ public class PhoneStatusBar extends BaseStatusBar {
     private CircleBattery mCircleBattery;
     private CircleDockBattery mCircleDockBattery;
 	private SquareBattery mSquareBattery;
-    private Clock mClock;
 
     private boolean mShowCarrierInPanel = false;
 
@@ -539,6 +538,11 @@ public class PhoneStatusBar extends BaseStatusBar {
                     }
                 });
 
+        if (!ActivityManager.isHighEndGfx()) {
+            mStatusBarWindow.setBackground(null);
+            mNotificationPanel.setBackground(new FastColorDrawable(context.getResources().getColor(
+                    R.color.notification_panel_solid_background)));
+        }
         if (ENABLE_INTRUDERS) {
             mIntruderAlertView = (IntruderAlertView) View.inflate(context, R.layout.intruder_alert, null);
             mIntruderAlertView.setVisibility(View.GONE);
@@ -704,7 +708,6 @@ public class PhoneStatusBar extends BaseStatusBar {
 
         mSignalView = (SignalClusterView) mStatusBarView.findViewById(R.id.signal_cluster);
         mSignalTextView = (SignalClusterTextView) mStatusBarView.findViewById(R.id.signal_cluster_text);
-        mClock = (Clock) mStatusBarView.findViewById(R.id.clock);
 
         mNetworkController.addSignalCluster(mSignalView);
         mSignalView.setNetworkController(mNetworkController);
@@ -771,6 +774,13 @@ public class PhoneStatusBar extends BaseStatusBar {
                     mSettingsPanel = (SettingsPanelView) ((ViewStub)settings_stub).inflate();
                 } else {
                     mSettingsPanel = (SettingsPanelView) mStatusBarWindow.findViewById(R.id.settings_panel);
+                }
+
+                if (mSettingsPanel != null) {
+                    if (!ActivityManager.isHighEndGfx()) {
+                        mSettingsPanel.setBackground(new FastColorDrawable(context.getResources().getColor(
+                                R.color.notification_panel_solid_background)));
+                    }
                 }
             }
 
@@ -2438,28 +2448,36 @@ public class PhoneStatusBar extends BaseStatusBar {
             mTicking = true;
             if (!mHaloActive) {
                 mStatusBarContents.setVisibility(View.GONE);
+                mCenterClockLayout.setVisibility(View.GONE);
                 mTickerView.setVisibility(View.VISIBLE);
                 mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_up_in, null));
                 mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
-            }
+                mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out,
+                    null));
+			}		
         }
 
         @Override
         public void tickerDone() {
             if (!mHaloActive) {
                 mStatusBarContents.setVisibility(View.VISIBLE);
+                mCenterClockLayout.setVisibility(View.VISIBLE);
                 mTickerView.setVisibility(View.GONE);
                 mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
                 mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_down_out,
                             mTickingDoneListener));
-            }
+                mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in,
+                    null));
+			}		
         }
 
         public void tickerHalting() {
             if (!mHaloActive) {
                 mStatusBarContents.setVisibility(View.VISIBLE);
+                mCenterClockLayout.setVisibility(View.VISIBLE);
                 mTickerView.setVisibility(View.GONE);
                 mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
+                mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
                 // we do not animate the ticker away at this point, just get rid of it (b/6992707)
             }
         }
