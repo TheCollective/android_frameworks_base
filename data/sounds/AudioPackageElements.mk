@@ -19,6 +19,7 @@ PRODUCT_COPY_FILES += \
         $(LOCAL_PATH)/alarms/ogg/Nobelium.ogg:system/media/audio/alarms/Nobelium.ogg \
         $(LOCAL_PATH)/alarms/ogg/Plutonium.ogg:system/media/audio/alarms/Plutonium.ogg \
         $(LOCAL_PATH)/alarms/ogg/Scandium.ogg:system/media/audio/alarms/Scandium.ogg \
+	$(LOCAL_PATH)/alarms/ogg/Alarm-Snooze.ogg:system/media/audio/alarms/Alarm-Snooze.ogg \
         $(LOCAL_PATH)/alarms/old/Alarm_Beep_01.ogg:system/media/audio/alarms/Alarm_Beep_01.ogg \
         $(LOCAL_PATH)/alarms/old/Alarm_Beep_02.ogg:system/media/audio/alarms/Alarm_Beep_02.ogg \
         $(LOCAL_PATH)/alarms/old/Alarm_Beep_03.ogg:system/media/audio/alarms/Alarm_Beep_03.ogg \
