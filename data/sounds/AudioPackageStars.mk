@@ -83,10 +83,6 @@ PRODUCT_COPY_FILES += \
         $(LOCAL_PATH)/ringtones/ogg/Perseus.ogg:system/media/audio/ringtones/Perseus.ogg \
         $(LOCAL_PATH)/ringtones/ogg/Pyxis.ogg:system/media/audio/ringtones/Pyxis.ogg \
         $(LOCAL_PATH)/ringtones/ogg/Rigel.ogg:system/media/audio/ringtones/Rigel.ogg \
-        $(LOCAL_PATH)/ringtones/old/Ring_Classic_02.ogg:system/media/audio/ringtones/Ring_Classic_02.ogg \
-        $(LOCAL_PATH)/ringtones/old/Ring_Digital_02.ogg:system/media/audio/ringtones/Ring_Digital_02.ogg \
-        $(LOCAL_PATH)/ringtones/old/Ring_Synth_02.ogg:system/media/audio/ringtones/Ring_Synth_02.ogg \
-        $(LOCAL_PATH)/ringtones/old/Ring_Synth_04.ogg:system/media/audio/ringtones/Ring_Synth_04.ogg \
         $(LOCAL_PATH)/ringtones/ogg/Scarabaeus.ogg:system/media/audio/ringtones/Scarabaeus.ogg \
         $(LOCAL_PATH)/ringtones/ogg/Sceptrum.ogg:system/media/audio/ringtones/Sceptrum.ogg \
         $(LOCAL_PATH)/ringtones/ogg/Solarium.ogg:system/media/audio/ringtones/Solarium.ogg \

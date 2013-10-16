@@ -23,21 +23,6 @@ PRODUCT_COPY_FILES += \
         $(LOCAL_PATH)/alarms/old/Alarm_WakeUp.ogg:system/media/audio/alarms/Alarm_WakeUp.ogg \
         $(LOCAL_PATH)/alarms/old/Work_work.ogg:system/media/audio/alarms/Work_work.ogg
 
-# Effects
-PRODUCT_COPY_FILES += \
-	$(LOCAL_PATH)/effects/old/camera_click.ogg:system/media/audio/ui/camera_click.ogg \
-	$(LOCAL_PATH)/effects/old/Dock.ogg:system/media/audio/ui/Dock.ogg \
-	$(LOCAL_PATH)/effects/old/Effect_Tick.ogg:system/media/audio/ui/Effect_Tick.ogg \
-	$(LOCAL_PATH)/effects/old/KeypressDelete.ogg:system/media/audio/ui/KeypressDelete.ogg \
-	$(LOCAL_PATH)/effects/old/KeypressReturn.ogg:system/media/audio/ui/KeypressReturn.ogg \
-	$(LOCAL_PATH)/effects/old/KeypressSpacebar.ogg:system/media/audio/ui/KeypressSpacebar.ogg \
-	$(LOCAL_PATH)/effects/old/KeypressStandard.ogg:system/media/audio/ui/KeypressStandard.ogg \
-	$(LOCAL_PATH)/effects/old/Lock.ogg:system/media/audio/ui/Lock.ogg \
-	$(LOCAL_PATH)/effects/old/LowBattery.ogg:system/media/audio/ui/LowBattery.ogg \
-	$(LOCAL_PATH)/effects/old/VideoRecord.ogg:system/media/audio/ui/VideoRecord.ogg \
-	$(LOCAL_PATH)/effects/old/Undock.ogg:system/media/audio/ui/Undock.ogg \
-	$(LOCAL_PATH)/effects/old/Unlock.ogg:system/media/audio/ui/Unlock.ogg
-
 # Notifications
 PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/notifications/old/Beat_Box_Android.ogg:system/media/audio/notifications/Beat_Box_Android.ogg \
