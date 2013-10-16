@@ -195,7 +195,9 @@ class SaveImageInBackgroundTask extends AsyncTask<SaveImageInBackgroundData, Voi
 
         try {
             // Create screenshot directory if it doesn't exist
-            mScreenshotDir.mkdirs();
+            if (!mScreenshotDir.mkdirs()) {
+              Log.e("Screenshot", "Cannot create directories " + mImageFilePath);
+            }
 
             // Save the screenshot to the MediaStore
             ContentValues values = new ContentValues();
