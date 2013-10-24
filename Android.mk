@@ -101,6 +101,7 @@ LOCAL_SRC_FILES += \
 	core/java/android/bluetooth/IBluetoothManagerCallback.aidl \
 	core/java/android/bluetooth/IBluetoothPbap.aidl \
 	core/java/android/bluetooth/IBluetoothStateChangeCallback.aidl \
+	core/java/android/bluetooth/IBluetoothHandsfreeClient.aidl \
 	core/java/android/bluetooth/IBluetoothGatt.aidl \
 	core/java/android/bluetooth/IBluetoothGattCallback.aidl \
 	core/java/android/bluetooth/IBluetoothGattServerCallback.aidl \
@@ -154,6 +155,7 @@ LOCAL_SRC_FILES += \
 	core/java/android/service/notification/INotificationListener.aidl \
 	core/java/android/service/dreams/IDreamManager.aidl \
 	core/java/android/service/dreams/IDreamService.aidl \
+	core/java/android/service/gesture/IGestureService.aidl \
 	core/java/android/service/pie/IPieService.aidl \
 	core/java/android/service/pie/IPieActivationListener.aidl \
 	core/java/android/service/pie/IPieHostCallback.aidl \
