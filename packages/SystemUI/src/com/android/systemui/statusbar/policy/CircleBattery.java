@@ -430,7 +430,7 @@ public class CircleBattery extends ImageView {
      */
     private void initSizeMeasureIconHeight() {
         final Bitmap measure = BitmapFactory.decodeResource(getResources(),
-                com.android.systemui.R.drawable.stat_sys_wifi_signal_4_fully);
+                com.android.systemui.R.drawable.circle_battery_mod);
         final int x = measure.getWidth() / 2;
 
         mCircleSize = 0;
