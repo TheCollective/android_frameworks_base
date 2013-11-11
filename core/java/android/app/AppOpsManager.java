@@ -422,7 +422,7 @@ public class AppOpsManager {
         }
     }
 
-     /** @hide */
+    /** @hide */
     public void resetAllModes() {
         try {
             mService.resetAllModes();

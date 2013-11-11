@@ -3625,6 +3625,8 @@ public final class Settings {
          */
         public static final String LOCKSCREEN_VIBRATE_ENABLED = "lockscreen.vibrate_enabled";
 
+        public static final String THEME_WALLPAPER = "theme_wallpaper";
+
         /**
          * Show the pending notification counts as overlays on the status bar
          * Whether to enable custom rebindings of the actions performed on
