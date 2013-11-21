@@ -16,11 +16,15 @@
 
 package com.android.server;
 
+import static android.Manifest.permission.MANAGE_CA_CERTIFICATES;
+
+import com.android.internal.R;
 import com.android.internal.os.storage.ExternalStorageFormatter;
 import com.android.internal.util.FastXmlSerializer;
 import com.android.internal.util.JournaledFile;
 import com.android.internal.util.XmlUtils;
 import com.android.internal.widget.LockPatternUtils;
+import com.android.org.conscrypt.TrustedCertificateStore;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -30,6 +34,9 @@ import android.app.Activity;
 import android.app.ActivityManagerNative;
 import android.app.AlarmManager;
 import android.app.AppGlobals;
+import android.app.INotificationManager;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.admin.DeviceAdminInfo;
 import android.app.admin.DeviceAdminReceiver;
@@ -48,7 +55,9 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
+import android.content.pm.UserInfo;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Environment;
@@ -60,14 +69,18 @@ import android.os.Process;
 import android.os.RecoverySystem;
 import android.os.RemoteCallback;
 import android.os.RemoteException;
-import android.os.SELinux;
 import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
+import android.security.Credentials;
+import android.security.IKeyChainService;
+import android.security.KeyChain;
+import android.security.KeyChain.KeyChainConnection;
 import android.util.AtomicFile;
+import android.util.Log;
 import android.util.PrintWriterPrinter;
 import android.util.Printer;
 import android.util.Slog;
@@ -76,6 +89,7 @@ import android.util.Xml;
 import android.view.IWindowManager;
 import android.view.WindowManagerPolicy;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -83,13 +97,18 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.security.KeyStore.TrustedCertificateEntry;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -110,6 +129,8 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     protected static final String ACTION_EXPIRED_PASSWORD_NOTIFICATION
             = "com.android.server.ACTION_EXPIRED_PASSWORD_NOTIFICATION";
 
+    private static final int MONITORING_CERT_NOTIFICATION_ID = R.string.ssl_ca_cert_warning;
+
     private static final boolean DBG = false;
 
     final Context mContext;
@@ -117,8 +138,15 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
 
     IPowerManager mIPowerManager;
     IWindowManager mIWindowManager;
+    NotificationManager mNotificationManager;
 
     private DeviceOwner mDeviceOwner;
+
+    /**
+     * Whether or not device admin feature is supported. If it isn't return defaults for all
+     * public methods.
+     */
+    private boolean mHasFeature;
 
     public static class DevicePolicyData {
         int mActivePasswordQuality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
@@ -143,40 +171,11 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         public DevicePolicyData(int userHandle) {
             mUserHandle = userHandle;
         }
-
-        /** Return the Admin that controls SELinux, or null if there is none. */
-        ActiveAdmin findSELinuxAdminLocked() {
-            final int N = mAdminList.size();
-            for (int i = 0; i < N; ++i) {
-                ActiveAdmin ap = mAdminList.get(i);
-                if (ap.isSELinuxAdmin) {
-                    // Device admin controls SELinux
-                    return ap;
-                }
-            }
-            // No device admin controls SELinux
-            return null;
-        }
-
-        /** Return the admin that controls SE Android MMAC, or null if there is none. */
-        ActiveAdmin findMMACadminLocked() {
-            //Uses very similar code to the SELinux version
-            final int N = mAdminList.size();
-            for (int i = 0; i < N; ++i) {
-                ActiveAdmin ap = mAdminList.get(i);
-                if (ap.isMMACadmin) {
-                    return ap;
-                }
-            }
-            return null;
-        }
     }
 
     final SparseArray<DevicePolicyData> mUserData = new SparseArray<DevicePolicyData>();
 
     Handler mHandler = new Handler();
-
-    Map<String, Boolean> seboolsOrig = null;
 
     BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -193,7 +192,12 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                         handlePasswordExpirationNotification(getUserData(userHandle));
                     }
                 });
-            } else if (Intent.ACTION_USER_REMOVED.equals(action)) {
+            }
+            if (Intent.ACTION_BOOT_COMPLETED.equals(action)
+                    || KeyChain.ACTION_STORAGE_CHANGED.equals(action)) {
+                manageMonitoringCertificateNotification(intent);
+            }
+            if (Intent.ACTION_USER_REMOVED.equals(action)) {
                 removeUserData(userHandle);
             } else if (Intent.ACTION_USER_STARTED.equals(action)
                     || Intent.ACTION_PACKAGE_CHANGED.equals(action)
@@ -210,85 +214,6 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                 handlePackagesChanged(userHandle);
             }
         }
-    };
-
-    private static abstract class PolicyFileDescription {
-        /** Path to the policy file */
-        final String path;
-
-        /** Admin has to be allowed to use this policy type before calling
-         * these functions. Typically {@link DeviceAdminInfo#USES_POLICY_ENFORCE_SELINUX} */
-        final int reqPolicy;
-
-        PolicyFileDescription(String _path, int _reqPolicy) {
-            path = _path;
-            reqPolicy = _reqPolicy;
-        }
-
-        /** Does this admin have exclusive control of the policy */
-        abstract boolean isPolicyAdmin(ActiveAdmin admin);
-
-        /** Called after policy is written to the file system */
-        abstract boolean doPolicyReload();
-    }
-
-    private static class SELinuxPolicyDescription extends PolicyFileDescription {
-        SELinuxPolicyDescription(String path) {
-            super(path, DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-        }
-
-        @Override
-        boolean isPolicyAdmin(ActiveAdmin admin) {
-            return admin.isSELinuxAdmin;
-        }
-
-        @Override
-        boolean doPolicyReload() {
-            SystemProperties.set("selinux.reload_policy", "1");
-            return true;
-        }
-    }
-
-    private static class MMACpolicyDescription extends PolicyFileDescription {
-        MMACpolicyDescription(String path) {
-            super(path, DeviceAdminInfo.USES_POLICY_ENFORCE_MMAC);
-        }
-
-        @Override
-        boolean isPolicyAdmin(ActiveAdmin admin) {
-            return admin.isMMACadmin;
-        }
-
-        @Override
-        boolean doPolicyReload() {
-            //policy is reloaded on reboot
-            return true;
-        }
-    }
-
-    private static final String MMAC_ENFORCE_PROPERTY = "persist.mmac.enforce";
-
-    private static final String SEPOLICY_PATH_SEPOLICY = "/data/security/sepolicy";
-
-    private static final String SEPOLICY_PATH_PROPCTXS = "/data/security/property_contexts";
-
-    private static final String SEPOLICY_PATH_FILECTXS = "/data/security/file_contexts";
-
-    private static final String SEPOLICY_PATH_SEAPPCTXS = "/data/security/seapp_contexts";
-
-    private static final String MMAC_POLICY_PATH = "/data/security/mac_permissions.xml";
-
-    private static final PolicyFileDescription[] POLICY_DESCRIPTIONS = {
-        // 0 = SEPOLICY_FILE_SEPOLICY
-        new SELinuxPolicyDescription(SEPOLICY_PATH_SEPOLICY),
-        // 1 = SEPOLICY_FILE_PROPCTXS
-        new SELinuxPolicyDescription(SEPOLICY_PATH_PROPCTXS),
-        // 2 = SEPOLICY_FILE_FILECTXS
-        new SELinuxPolicyDescription(SEPOLICY_PATH_FILECTXS),
-        // 3 = SEPOLICY_FILE_SEAPPCTXS
-        new SELinuxPolicyDescription(SEPOLICY_PATH_SEAPPCTXS),
-        // 4 = MMAC_POLICY_FILE
-        new MMACpolicyDescription(MMAC_POLICY_PATH),
     };
 
     static class ActiveAdmin {
@@ -343,24 +268,8 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         String globalProxySpec = null;
         String globalProxyExclusionList = null;
 
-        boolean isSELinuxAdmin = false;
-        boolean enforceSELinux = false;
-        Map<String, Boolean> sebools = null;
-
-        boolean isMMACadmin = false;
-        boolean enforceMMAC = false;
-
-        boolean[] isCustomPolicyFile = new boolean[DevicePolicyManager.SEPOLICY_FILE_COUNT];
-
         ActiveAdmin(DeviceAdminInfo _info) {
             info = _info;
-            if (info != null && getUserHandle().getIdentifier() == UserHandle.USER_OWNER) {
-                for (int i = 0; i < isCustomPolicyFile.length; ++i) {
-                    isCustomPolicyFile[i] = false;
-                }
-            } else {
-                isCustomPolicyFile = null;
-            }
         }
 
         int getUid() { return info.getActivityInfo().applicationInfo.uid; }
@@ -469,63 +378,6 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                 out.attribute(null, "value", Integer.toString(disabledKeyguardFeatures));
                 out.endTag(null, "disable-keyguard-features");
             }
-            if (isSELinuxAdmin) {
-                out.startTag(null, "selinux-admin");
-                out.attribute(null, "value", Boolean.toString(isSELinuxAdmin));
-                out.endTag(null, "selinux-admin");
-                if (enforceSELinux) {
-                    out.startTag(null, "enforce-selinux");
-                    out.attribute(null, "value", Boolean.toString(enforceSELinux));
-                    out.endTag(null, "enforce-selinux");
-                }
-                Set<String> bools = sebools.keySet();
-                for (String s : bools) {
-                    out.startTag(null, "selinux-boolean");
-                    out.attribute(null, "name", s);
-                    out.attribute(null, "value", sebools.get(s).toString());
-                    out.endTag(null, "selinux-boolean");
-                }
-                boolean isCustomSELinux = isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEPOLICY];
-                if (isCustomSELinux) {
-                    out.startTag(null, "selinux-sepolicy");
-                    out.attribute(null, "value", Boolean.toString(isCustomSELinux));
-                    out.endTag(null, "selinux-sepolicy");
-                }
-                boolean isCustomPropCtxs = isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_PROPCTXS];
-                if (isCustomPropCtxs) {
-                    out.startTag(null, "selinux-propctxs");
-                    out.attribute(null, "value", Boolean.toString(isCustomPropCtxs));
-                    out.endTag(null, "selinux-propctxs");
-                }
-                boolean isCustomFileCtxs = isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_FILECTXS];
-                if (isCustomFileCtxs) {
-                    out.startTag(null, "selinux-filectxs");
-                    out.attribute(null, "value", Boolean.toString(isCustomFileCtxs));
-                    out.endTag(null, "selinux-filectxs");
-                }
-                boolean isCustomSEAppCtxs = isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEAPPCTXS];
-                if (isCustomSEAppCtxs) {
-                    out.startTag(null, "selinux-seappctxs");
-                    out.attribute(null, "value", Boolean.toString(isCustomSEAppCtxs));
-                    out.endTag(null, "selinux-seappctxs");
-                }
-            }
-            if (isMMACadmin) {
-                out.startTag(null, "mmac-admin");
-                out.attribute(null, "value", Boolean.toString(isMMACadmin));
-                out.endTag(null, "mmac-admin");
-                if (enforceMMAC) {
-                    out.startTag(null, "enforce-mmac");
-                    out.attribute(null, "value", Boolean.toString(enforceMMAC));
-                    out.endTag(null, "enforce-mmac");
-                }
-                boolean isCustomMMAC = isCustomPolicyFile[DevicePolicyManager.MMAC_POLICY_FILE];
-                if (isCustomMMAC) {
-                    out.startTag(null, "mmac-macperms");
-                    out.attribute(null, "value", Boolean.toString(isCustomMMAC));
-                    out.endTag(null, "mmac-macperms");
-                }
-            }
         }
 
         void readFromXml(XmlPullParser parser)
@@ -597,41 +449,6 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                 } else if ("disable-keyguard-features".equals(tag)) {
                     disabledKeyguardFeatures = Integer.parseInt(
                             parser.getAttributeValue(null, "value"));
-                } else if ("selinux-admin".equals(tag)) {
-                    isSELinuxAdmin = Boolean.parseBoolean(
-                            parser.getAttributeValue(null, "value"));
-                    if (isSELinuxAdmin) {
-                        sebools = new HashMap<String, Boolean>();
-                    }
-                } else if ("enforce-selinux".equals(tag)) {
-                    enforceSELinux = Boolean.parseBoolean(
-                            parser.getAttributeValue(null, "value"));
-                } else if ("selinux-boolean".equals(tag)) {
-                    sebools.put(
-                            parser.getAttributeValue(null, "name"),
-                            Boolean.parseBoolean(
-                                    parser.getAttributeValue(null, "value")));
-                } else if ("selinux-sepolicy".equals(tag)) {
-                    this.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEPOLICY] =
-                            Boolean.parseBoolean(parser.getAttributeValue(null, "value"));
-                } else if ("selinux-propctxs".equals(tag)) {
-                    this.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_PROPCTXS] =
-                            Boolean.parseBoolean(parser.getAttributeValue(null, "value"));
-                } else if ("selinux-filectxs".equals(tag)) {
-                    this.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_FILECTXS] =
-                            Boolean.parseBoolean(parser.getAttributeValue(null, "value"));
-                } else if ("selinux-seappctxs".equals(tag)) {
-                    this.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEAPPCTXS] =
-                            Boolean.parseBoolean(parser.getAttributeValue(null, "value"));
-                } else if ("mmac-admin".equals(tag)) {
-                    isMMACadmin = Boolean.parseBoolean(
-                            parser.getAttributeValue(null, "value"));
-                } else if ("enforce-mmac".equals(tag)) {
-                    enforceMMAC = Boolean.parseBoolean(
-                            parser.getAttributeValue(null, "value"));
-                } else if ("mmac-macperms".equals(tag)) {
-                    this.isCustomPolicyFile[DevicePolicyManager.MMAC_POLICY_FILE] =
-                            Boolean.parseBoolean(parser.getAttributeValue(null, "value"));
                 } else {
                     Slog.w(TAG, "Unknown admin tag: " + tag);
                 }
@@ -690,27 +507,6 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                     pw.println(disableCamera);
             pw.print(prefix); pw.print("disabledKeyguardFeatures=");
                     pw.println(disabledKeyguardFeatures);
-            pw.print(prefix); pw.print("isSELinuxAdmin=");
-                    pw.println(isSELinuxAdmin);
-            pw.print(prefix); pw.print("enforceSELinux=");
-                    pw.println(enforceSELinux);
-            pw.print(prefix); pw.print("sebools=");
-                    pw.println(sebools);
-            pw.print(prefix); pw.print("customSELinuxPolicy=");
-                    pw.println(isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEPOLICY]);
-            pw.print(prefix); pw.print("customPropertyContexts=");
-                    pw.println(isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_PROPCTXS]);
-            pw.print(prefix); pw.print("customFileContexts=");
-                    pw.println(isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_FILECTXS]);
-            pw.print(prefix); pw.print("customSEappContexts=");
-                    pw.println(isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEAPPCTXS]);
-            pw.print(prefix); pw.print("isMMACadmin=");
-                    pw.println(isMMACadmin);
-            pw.print(prefix); pw.print("enforceMMAC=");
-                    pw.println(enforceMMAC);
-            pw.print(prefix); pw.print("customMMACpolicy=");
-                    pw.println(isCustomPolicyFile[DevicePolicyManager.MMAC_POLICY_FILE]);
-
         }
     }
 
@@ -743,13 +539,20 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      */
     public DevicePolicyManagerService(Context context) {
         mContext = context;
+        mHasFeature = context.getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_DEVICE_ADMIN);
         mWakeLock = ((PowerManager)context.getSystemService(Context.POWER_SERVICE))
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DPM");
+        if (!mHasFeature) {
+            // Skip the rest of the initialization
+            return;
+        }
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_BOOT_COMPLETED);
         filter.addAction(ACTION_EXPIRED_PASSWORD_NOTIFICATION);
         filter.addAction(Intent.ACTION_USER_REMOVED);
         filter.addAction(Intent.ACTION_USER_STARTED);
+        filter.addAction(KeyChain.ACTION_STORAGE_CHANGED);
         context.registerReceiverAsUser(mReceiver, UserHandle.ALL, filter, null, mHandler);
         filter = new IntentFilter();
         filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
@@ -859,6 +662,14 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         return mIWindowManager;
     }
 
+    private NotificationManager getNotificationManager() {
+        if (mNotificationManager == null) {
+            mNotificationManager =
+                    (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+        }
+        return mNotificationManager;
+    }
+
     ActiveAdmin getActiveAdminUncheckedLocked(ComponentName who, int userHandle) {
         ActiveAdmin admin = getUserData(userHandle).mAdminMap.get(who);
         if (admin != null
@@ -946,24 +757,12 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                                 DevicePolicyData policy = getUserData(userHandle);
                                 boolean doProxyCleanup = admin.info.usesPolicy(
                                         DeviceAdminInfo.USES_POLICY_SETS_GLOBAL_PROXY);
-                                boolean doSELinuxCleanup = admin.isSELinuxAdmin;
-                                boolean doMMACcleanup = admin.isMMACadmin;
                                 policy.mAdminList.remove(admin);
                                 policy.mAdminMap.remove(adminReceiver);
                                 validatePasswordOwnerLocked(policy);
                                 syncDeviceCapabilitiesLocked(policy);
                                 if (doProxyCleanup) {
                                     resetGlobalProxyLocked(getUserData(userHandle));
-                                }
-                                if (doSELinuxCleanup) {
-                                    syncSELinuxPolicyLocked(policy,
-                                            admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEPOLICY],
-                                            admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_PROPCTXS],
-                                            admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_FILECTXS],
-                                            admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEAPPCTXS]);
-                                }
-                                if (doMMACcleanup) {
-                                    syncMMACpolicyLocked(policy, admin.isCustomPolicyFile[DevicePolicyManager.MMAC_POLICY_FILE]);
                                 }
                                 saveSettingsLocked(userHandle);
                                 updateMaximumTimeToLockLocked(policy);
@@ -974,6 +773,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public DeviceAdminInfo findAdmin(ComponentName adminName, int userHandle) {
+        if (!mHasFeature) {
+            return null;
+        }
         enforceCrossUserPermission(userHandle);
         Intent resolveIntent = new Intent();
         resolveIntent.setComponent(adminName);
@@ -1206,8 +1008,6 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         validatePasswordOwnerLocked(policy);
         syncDeviceCapabilitiesLocked(policy);
         updateMaximumTimeToLockLocked(policy);
-        syncSELinuxPolicyLocked(policy, false, true);
-        syncMMACpolicyLocked(policy, false, true);
     }
 
     static void validateQualityConstant(int quality) {
@@ -1265,9 +1065,10 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void systemReady() {
-        assert DevicePolicyManager.SEPOLICY_FILE_COUNT == POLICY_DESCRIPTIONS.length;
+        if (!mHasFeature) {
+            return;
+        }
         synchronized (this) {
-            saveOriginalSELinuxSettings();
             loadSettingsLocked(getUserData(UserHandle.USER_OWNER), UserHandle.USER_OWNER);
             loadDeviceOwner();
         }
@@ -1293,13 +1094,73 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         }
     }
 
+    private void manageMonitoringCertificateNotification(Intent intent) {
+        final NotificationManager notificationManager = getNotificationManager();
+
+        final boolean hasCert = DevicePolicyManager.hasAnyCaCertsInstalled();
+        if (! hasCert) {
+            if (intent.getAction().equals(KeyChain.ACTION_STORAGE_CHANGED)) {
+                UserManager um = (UserManager) mContext.getSystemService(Context.USER_SERVICE);
+                for (UserInfo user : um.getUsers()) {
+                    notificationManager.cancelAsUser(
+                            null, MONITORING_CERT_NOTIFICATION_ID, user.getUserHandle());
+                }
+            }
+            return;
+        }
+        final boolean isManaged = getDeviceOwner() != null;
+        int smallIconId;
+        String contentText;
+        if (isManaged) {
+            contentText = mContext.getString(R.string.ssl_ca_cert_noti_managed,
+                    getDeviceOwnerName());
+            smallIconId = R.drawable.stat_sys_certificate_info;
+        } else {
+            contentText = mContext.getString(R.string.ssl_ca_cert_noti_by_unknown);
+            smallIconId = android.R.drawable.stat_sys_warning;
+        }
+
+        Intent dialogIntent = new Intent(Settings.ACTION_MONITORING_CERT_INFO);
+        dialogIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        dialogIntent.setPackage("com.android.settings");
+        // Notification will be sent individually to all users. The activity should start as
+        // whichever user is current when it starts.
+        PendingIntent notifyIntent = PendingIntent.getActivityAsUser(mContext, 0, dialogIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT, null, UserHandle.CURRENT);
+
+        Notification noti = new Notification.Builder(mContext)
+            .setSmallIcon(smallIconId)
+            .setContentTitle(mContext.getString(R.string.ssl_ca_cert_warning))
+            .setContentText(contentText)
+            .setContentIntent(notifyIntent)
+            .setPriority(Notification.PRIORITY_HIGH)
+            .setShowWhen(false)
+            .build();
+
+        // If this is a boot intent, this will fire for each user. But if this is a storage changed
+        // intent, it will fire once, so we need to notify all users.
+        if (intent.getAction().equals(KeyChain.ACTION_STORAGE_CHANGED)) {
+            UserManager um = (UserManager) mContext.getSystemService(Context.USER_SERVICE);
+            for (UserInfo user : um.getUsers()) {
+                notificationManager.notifyAsUser(
+                        null, MONITORING_CERT_NOTIFICATION_ID, noti, user.getUserHandle());
+            }
+        } else {
+            notificationManager.notifyAsUser(
+                    null, MONITORING_CERT_NOTIFICATION_ID, noti, UserHandle.CURRENT);
+        }
+    }
+
     /**
      * @param adminReceiver The admin to add
      * @param refreshing true = update an active admin, no error
      */
     public void setActiveAdmin(ComponentName adminReceiver, boolean refreshing, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         mContext.enforceCallingOrSelfPermission(
-                android.Manifest.permission.BIND_DEVICE_ADMIN, null);
+                android.Manifest.permission.MANAGE_DEVICE_ADMINS, null);
         enforceCrossUserPermission(userHandle);
 
         DevicePolicyData policy = getUserData(userHandle);
@@ -1341,6 +1202,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public boolean isAdminActive(ComponentName adminReceiver, int userHandle) {
+        if (!mHasFeature) {
+            return false;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             return getActiveAdminUncheckedLocked(adminReceiver, userHandle) != null;
@@ -1348,6 +1212,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public boolean hasGrantedPolicy(ComponentName adminReceiver, int policyId, int userHandle) {
+        if (!mHasFeature) {
+            return false;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             ActiveAdmin administrator = getActiveAdminUncheckedLocked(adminReceiver, userHandle);
@@ -1358,7 +1225,12 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public List<ComponentName> getActiveAdmins(int userHandle) {
+        if (!mHasFeature) {
+            return Collections.EMPTY_LIST;
+        }
+
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             DevicePolicyData policy = getUserData(userHandle);
@@ -1375,6 +1247,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public boolean packageHasActiveAdmins(String packageName, int userHandle) {
+        if (!mHasFeature) {
+            return false;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             DevicePolicyData policy = getUserData(userHandle);
@@ -1389,6 +1264,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void removeActiveAdmin(ComponentName adminReceiver, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             ActiveAdmin admin = getActiveAdminUncheckedLocked(adminReceiver, userHandle);
@@ -1402,7 +1280,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                     return;
                 }
                 mContext.enforceCallingOrSelfPermission(
-                        android.Manifest.permission.BIND_DEVICE_ADMIN, null);
+                        android.Manifest.permission.MANAGE_DEVICE_ADMINS, null);
             }
             long ident = Binder.clearCallingIdentity();
             try {
@@ -1414,6 +1292,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordQuality(ComponentName who, int quality, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         validateQualityConstant(quality);
         enforceCrossUserPermission(userHandle);
 
@@ -1431,6 +1312,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordQuality(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int mode = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
@@ -1453,6 +1337,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordMinimumLength(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1468,6 +1355,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumLength(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             DevicePolicyData policy = getUserData(userHandle);
@@ -1490,6 +1380,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordHistoryLength(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1505,6 +1398,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordHistoryLength(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             DevicePolicyData policy = getUserData(userHandle);
@@ -1527,6 +1423,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordExpirationTimeout(ComponentName who, long timeout, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1557,6 +1456,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * Returns 0 if not configured.
      */
     public long getPasswordExpirationTimeout(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0L;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who != null) {
@@ -1602,6 +1504,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public long getPasswordExpiration(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0L;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             return getPasswordExpirationLocked(who, userHandle);
@@ -1609,6 +1514,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordMinimumUpperCase(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1624,6 +1532,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumUpperCase(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int length = 0;
@@ -1661,6 +1572,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumLowerCase(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int length = 0;
@@ -1683,6 +1597,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordMinimumLetters(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1698,6 +1615,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumLetters(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int length = 0;
@@ -1720,6 +1640,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordMinimumNumeric(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1735,6 +1658,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumNumeric(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int length = 0;
@@ -1757,6 +1683,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordMinimumSymbols(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1772,6 +1701,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumSymbols(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int length = 0;
@@ -1794,6 +1726,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setPasswordMinimumNonLetter(ComponentName who, int length, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -1809,6 +1744,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getPasswordMinimumNonLetter(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             int length = 0;
@@ -1831,6 +1769,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public boolean isActivePasswordSufficient(int userHandle) {
+        if (!mHasFeature) {
+            return true;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             DevicePolicyData policy = getUserData(userHandle);
@@ -1866,6 +1807,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setMaximumFailedPasswordsForWipe(ComponentName who, int num, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             // This API can only be called by an active device admin,
@@ -1882,6 +1826,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public int getMaximumFailedPasswordsForWipe(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             DevicePolicyData policy = getUserData(userHandle);
@@ -1907,6 +1854,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public boolean resetPassword(String password, int flags, int userHandle) {
+        if (!mHasFeature) {
+            return false;
+        }
         enforceCrossUserPermission(userHandle);
         int quality;
         synchronized (this) {
@@ -1920,7 +1870,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                 if (realQuality < quality
                         && quality != DevicePolicyManager.PASSWORD_QUALITY_COMPLEX) {
                     Slog.w(TAG, "resetPassword: password quality 0x"
-                            + Integer.toHexString(quality)
+                            + Integer.toHexString(realQuality)
                             + " does not meet required quality 0x"
                             + Integer.toHexString(quality));
                     return false;
@@ -2028,6 +1978,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void setMaximumTimeToLock(ComponentName who, long timeMs, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -2073,6 +2026,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public long getMaximumTimeToLock(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             long time = 0;
@@ -2098,6 +2054,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void lockNow() {
+        if (!mHasFeature) {
+            return;
+        }
         synchronized (this) {
             // This API can only be called by an active device admin,
             // so try to retrieve it to check that the caller is one.
@@ -2126,6 +2085,76 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         return !"".equals(state);
     }
 
+    public boolean installCaCert(byte[] certBuffer) throws RemoteException {
+        mContext.enforceCallingOrSelfPermission(MANAGE_CA_CERTIFICATES, null);
+        KeyChainConnection keyChainConnection = null;
+        byte[] pemCert;
+        try {
+            X509Certificate cert = parseCert(certBuffer);
+            pemCert =  Credentials.convertToPem(cert);
+        } catch (CertificateException ce) {
+            Log.e(TAG, "Problem converting cert", ce);
+            return false;
+        } catch (IOException ioe) {
+            Log.e(TAG, "Problem reading cert", ioe);
+            return false;
+        }
+        try {
+            keyChainConnection = KeyChain.bind(mContext);
+            try {
+                keyChainConnection.getService().installCaCertificate(pemCert);
+                return true;
+            } finally {
+                if (keyChainConnection != null) {
+                    keyChainConnection.close();
+                    keyChainConnection = null;
+                }
+            }
+        } catch (InterruptedException e1) {
+            Log.w(TAG, "installCaCertsToKeyChain(): ", e1);
+            Thread.currentThread().interrupt();
+        }
+        return false;
+    }
+
+    private static X509Certificate parseCert(byte[] certBuffer)
+            throws CertificateException, IOException {
+        CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+        return (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(
+                certBuffer));
+    }
+
+    public void uninstallCaCert(final byte[] certBuffer) {
+        mContext.enforceCallingOrSelfPermission(MANAGE_CA_CERTIFICATES, null);
+        TrustedCertificateStore certStore = new TrustedCertificateStore();
+        String alias = null;
+        try {
+            X509Certificate cert = parseCert(certBuffer);
+            alias = certStore.getCertificateAlias(cert);
+        } catch (CertificateException ce) {
+            Log.e(TAG, "Problem creating X509Certificate", ce);
+            return;
+        } catch (IOException ioe) {
+            Log.e(TAG, "Problem reading certificate", ioe);
+            return;
+        }
+        try {
+            KeyChainConnection keyChainConnection = KeyChain.bind(mContext);
+            IKeyChainService service = keyChainConnection.getService();
+            try {
+                service.deleteCaCertificate(alias);
+            } catch (RemoteException e) {
+                Log.e(TAG, "from CaCertUninstaller: ", e);
+            } finally {
+                keyChainConnection.close();
+                keyChainConnection = null;
+            }
+        } catch (InterruptedException ie) {
+            Log.w(TAG, "CaCertUninstaller: ", ie);
+            Thread.currentThread().interrupt();
+        }
+    }
+
     void wipeDataLocked(int flags) {
         // If the SD card is encrypted and non-removable, we have to force a wipe.
         boolean forceExtWipe = !Environment.isExternalStorageRemovable() && isExtStorageEncrypted();
@@ -2148,6 +2177,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void wipeData(int flags, final int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             // This API can only be called by an active device admin,
@@ -2183,6 +2215,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public void getRemoveWarning(ComponentName comp, final RemoteCallback result, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.BIND_DEVICE_ADMIN, null);
@@ -2213,6 +2248,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
 
     public void setActivePasswordState(int quality, int length, int letters, int uppercase,
             int lowercase, int numbers, int symbols, int nonletter, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.BIND_DEVICE_ADMIN, null);
@@ -2279,12 +2317,14 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
             try {
                 policy.mFailedPasswordAttempts++;
                 saveSettingsLocked(userHandle);
-                int max = getMaximumFailedPasswordsForWipe(null, userHandle);
-                if (max > 0 && policy.mFailedPasswordAttempts >= max) {
-                    wipeDeviceOrUserLocked(0, userHandle);
+                if (mHasFeature) {
+                    int max = getMaximumFailedPasswordsForWipe(null, userHandle);
+                    if (max > 0 && policy.mFailedPasswordAttempts >= max) {
+                        wipeDeviceOrUserLocked(0, userHandle);
+                    }
+                    sendAdminCommandLocked(DeviceAdminReceiver.ACTION_PASSWORD_FAILED,
+                            DeviceAdminInfo.USES_POLICY_WATCH_LOGIN, userHandle);
                 }
-                sendAdminCommandLocked(DeviceAdminReceiver.ACTION_PASSWORD_FAILED,
-                        DeviceAdminInfo.USES_POLICY_WATCH_LOGIN, userHandle);
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }
@@ -2304,8 +2344,10 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                     policy.mFailedPasswordAttempts = 0;
                     policy.mPasswordOwner = -1;
                     saveSettingsLocked(userHandle);
-                    sendAdminCommandLocked(DeviceAdminReceiver.ACTION_PASSWORD_SUCCEEDED,
-                            DeviceAdminInfo.USES_POLICY_WATCH_LOGIN, userHandle);
+                    if (mHasFeature) {
+                        sendAdminCommandLocked(DeviceAdminReceiver.ACTION_PASSWORD_SUCCEEDED,
+                                DeviceAdminInfo.USES_POLICY_WATCH_LOGIN, userHandle);
+                    }
                 } finally {
                     Binder.restoreCallingIdentity(ident);
                 }
@@ -2315,6 +2357,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
 
     public ComponentName setGlobalProxy(ComponentName who, String proxySpec,
             String exclusionList, int userHandle) {
+        if (!mHasFeature) {
+            return null;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized(this) {
             if (who == null) {
@@ -2365,6 +2410,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     public ComponentName getGlobalProxyAdmin(int userHandle) {
+        if (!mHasFeature) {
+            return null;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized(this) {
             DevicePolicyData policy = getUserData(UserHandle.USER_OWNER);
@@ -2426,6 +2474,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * status (for all admins).
      */
     public int setStorageEncryption(ComponentName who, boolean encrypt, int userHandle) {
+        if (!mHasFeature) {
+            return DevicePolicyManager.ENCRYPTION_STATUS_UNSUPPORTED;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             // Check for permissions
@@ -2477,6 +2528,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * active admins.
      */
     public boolean getStorageEncryption(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return false;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             // Check for permissions if a particular caller is specified
@@ -2503,6 +2557,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * Get the current encryption status of the device.
      */
     public int getStorageEncryptionStatus(int userHandle) {
+        if (!mHasFeature) {
+            // Ok to return current status.
+        }
         enforceCrossUserPermission(userHandle);
         return getEncryptionStatus();
     }
@@ -2551,6 +2608,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * Disables all device cameras according to the specified admin.
      */
     public void setCameraDisabled(ComponentName who, boolean disabled, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who == null) {
@@ -2571,6 +2631,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * active admins.
      */
     public boolean getCameraDisabled(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return false;
+        }
         synchronized (this) {
             if (who != null) {
                 ActiveAdmin admin = getActiveAdminUncheckedLocked(who, userHandle);
@@ -2594,13 +2657,14 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * Selectively disable keyguard features.
      */
     public void setKeyguardDisabledFeatures(ComponentName who, int which, int userHandle) {
+        if (!mHasFeature) {
+            return;
+        }
         enforceCrossUserPermission(userHandle);
-
         synchronized (this) {
             if (who == null) {
                 throw new NullPointerException("ComponentName is null");
             }
-
             ActiveAdmin ap = getActiveAdminForCallerLocked(who,
                     DeviceAdminInfo.USES_POLICY_DISABLE_KEYGUARD_FEATURES);
             if (ap.disabledKeyguardFeatures != which) {
@@ -2616,6 +2680,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
      * or the aggregate of all active admins if who is null.
      */
     public int getKeyguardDisabledFeatures(ComponentName who, int userHandle) {
+        if (!mHasFeature) {
+            return 0;
+        }
         enforceCrossUserPermission(userHandle);
         synchronized (this) {
             if (who != null) {
@@ -2636,7 +2703,10 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     }
 
     @Override
-    public boolean setDeviceOwner(String packageName) {
+    public boolean setDeviceOwner(String packageName, String ownerName) {
+        if (!mHasFeature) {
+            return false;
+        }
         if (packageName == null
                 || !DeviceOwner.isInstalled(packageName, mContext.getPackageManager())) {
             throw new IllegalArgumentException("Invalid package name " + packageName
@@ -2644,7 +2714,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         }
         synchronized (this) {
             if (mDeviceOwner == null && !isDeviceProvisioned()) {
-                mDeviceOwner = new DeviceOwner(packageName);
+                mDeviceOwner = new DeviceOwner(packageName, ownerName);
                 mDeviceOwner.writeOwnerFile();
                 return true;
             } else {
@@ -2657,6 +2727,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
 
     @Override
     public boolean isDeviceOwner(String packageName) {
+        if (!mHasFeature) {
+            return false;
+        }
         synchronized (this) {
             return mDeviceOwner != null
                     && mDeviceOwner.getPackageName().equals(packageName);
@@ -2665,9 +2738,26 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
 
     @Override
     public String getDeviceOwner() {
+        if (!mHasFeature) {
+            return null;
+        }
         synchronized (this) {
             if (mDeviceOwner != null) {
                 return mDeviceOwner.getPackageName();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String getDeviceOwnerName() {
+        if (!mHasFeature) {
+            return null;
+        }
+        mContext.enforceCallingOrSelfPermission(android.Manifest.permission.MANAGE_USERS, null);
+        synchronized (this) {
+            if (mDeviceOwner != null) {
+                return mDeviceOwner.getName();
             }
         }
         return null;
@@ -2688,693 +2778,6 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
             mContext.enforceCallingOrSelfPermission(
                     android.Manifest.permission.INTERACT_ACROSS_USERS_FULL, "Must be system or have"
                     + " INTERACT_ACROSS_USERS_FULL permission");
-        }
-    }
-
-    private void saveOriginalSELinuxSettings() {
-        // SELinux booleans
-        String[] seboolNames = SELinux.getBooleanNames();
-        seboolsOrig = new HashMap<String, Boolean>(seboolNames.length);
-        for (String sebool : seboolNames) {
-            boolean value = SELinux.getBooleanValue(sebool);
-            seboolsOrig.put(sebool, value);
-        }
-        seboolsOrig = Collections.unmodifiableMap(seboolsOrig);
-    }
-
-    // Possible SELinux Admin API states:
-    //  1: Caller has ENFORCE_SELINUX = {T,F}
-    //  2: Caller is a SELinux admin = {T,F}
-    //  3: There is a SELinux admin on the system = {T,F}
-    // Invariants:
-    //  a) 1=F -> 2=F
-    //  b) 3=F -> 2=F for all admin apps
-    // States:
-    //  TTT, TTF, TFT, TFF, FTT, FTF, FFT, FFF
-    //  TTT,      TFT, TFF,           FFT, FFF
-    //       TTF fails b,
-    //                      FTT fails a
-    //                           FTF fails a,b
-
-    /** Resets the state the SELinux values in an ActiveAdmin to the current state of system */
-    private static void resetSELinuxAdmin(ActiveAdmin admin) {
-        String[] seboolsnames = SELinux.getBooleanNames();
-        admin.enforceSELinux = SELinux.isSELinuxEnforced();
-        admin.sebools = new HashMap<String, Boolean>(seboolsnames.length);
-        for (String bool : seboolsnames) {
-            admin.sebools.put(bool, SELinux.getBooleanValue(bool));
-        }
-    }
-
-    private boolean syncSELinuxPolicyLocked(DevicePolicyData policy, boolean removeAllPolicy) {
-        return syncSELinuxPolicyLocked(policy, removeAllPolicy, removeAllPolicy,
-                                       removeAllPolicy, removeAllPolicy);
-    }
-
-    private boolean syncSELinuxPolicyLocked(DevicePolicyData policy, boolean removeSELinuxPolicy,
-                                            boolean removePropertyContexts,
-                                            boolean removeFileContexts, boolean removeSEappContexts) {
-        return syncSELinuxPolicyLocked(policy, removeSELinuxPolicy, removePropertyContexts,
-                                       removeFileContexts, removeSEappContexts, false);
-    }
-
-    private boolean syncSELinuxPolicyLocked(DevicePolicyData policy, boolean removeAllPolicy, boolean firstBoot) {
-            return syncSELinuxPolicyLocked(policy, removeAllPolicy, removeAllPolicy,
-                                           removeAllPolicy, removeAllPolicy, firstBoot);
-    }
-
-    /**
-     * Sync's the current SELinux admin's policies to the device. If there is
-     * no SELinux admin, then this will set SELinux to permissive mode,
-     * restore the SELinux boolean values from when the system booted,
-     * and may remove the {@link SELINUX_POLICY_PATH},
-     * {@link PROPERTY_CONTEXTS_PATH}, {@link FILE_CONTEXTS_PATH}, and
-     * {@link SEAPP_CONTEXTS_PATH} files.
-     * @return true if policies were synced successfully
-     */
-    private boolean syncSELinuxPolicyLocked(DevicePolicyData policy,
-            boolean removeSELinuxPolicy, boolean removePropertyContexts,
-            boolean removeFileContexts, boolean removeSEappContexts, 
-            boolean firstBoot) {
-        if (!SELinux.isSELinuxEnabled() || policy.mUserHandle != UserHandle.USER_OWNER) {
-            return false;
-        }
-
-        ActiveAdmin selinuxAdmin = policy.findSELinuxAdminLocked();
-        if (selinuxAdmin == null) {
-            return false;
-        }
-        
-        boolean systemState = SELinux.isSELinuxEnforced();
-        boolean desiredState = selinuxAdmin.enforceSELinux;
-        if (!firstBoot || !systemState) {
-            if (systemState != desiredState) {
-                Slog.v(TAG, "SELinux enforcing was " + systemState + ", to be set to " + desiredState);
-                boolean res = SELinux.setSELinuxEnforce(desiredState);
-                Slog.v(TAG, "Change in SELinux enforcing state " + (res ? "succeeded" : "failed"));
-                if (res == false) {
-                    // this really shouldn't ever happen
-                    resetSELinuxAdmin(selinuxAdmin);
-                    return false;
-                }
-            }
-        }
-        
-        Set<String> sebools = selinuxAdmin.sebools.keySet();
-        for (String sebool : sebools) {
-            systemState = SELinux.getBooleanValue(sebool);
-            desiredState = selinuxAdmin.sebools.get(sebool);
-            if (systemState != desiredState) {
-                Slog.v(TAG, "SELinux boolean [" + sebool + "] : " + systemState + " -> " + desiredState);
-                boolean res = SELinux.setBooleanValue(sebool, desiredState);
-                Slog.v(TAG, "SELinux boolean " + sebool + " " + (res ? "succeeded" : "failed"));
-                if (res == false) {
-                    // this really shouldn't ever happen
-                    resetSELinuxAdmin(selinuxAdmin);
-                    return false;
-                }
-            }
-        }
-        
-        boolean ret = true;
-        if (removeSELinuxPolicy || removePropertyContexts
-            || removeFileContexts || removeSEappContexts) {
-            File polfile;
-            polfile = new File(SEPOLICY_PATH_SEPOLICY);
-            if (removeSELinuxPolicy && polfile.exists() && !polfile.delete()) {
-                ret = false;
-            }
-            polfile = new File(SEPOLICY_PATH_PROPCTXS);
-            if (removePropertyContexts && polfile.exists() && !polfile.delete()) {
-                ret = false;
-            }
-            polfile = new File(SEPOLICY_PATH_FILECTXS);
-            if (removeFileContexts && polfile.exists() && !polfile.delete()) {
-                ret = false;
-            }
-            polfile = new File(SEPOLICY_PATH_SEAPPCTXS);
-            if (removeSEappContexts && polfile.exists() && !polfile.delete()) {
-                ret = false;
-            }
-            SystemProperties.set("selinux.reload_policy", "1");
-        }
-        return ret;
-    }
-
-    // Cases = 8
-    @Override
-    public boolean isSELinuxAdmin(ComponentName who, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            //Case F** = 4
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-            //Case T** = 4
-            return admin.isSELinuxAdmin;
-        }
-    }
-
-    // Cases = 16
-    @Override
-    public boolean setSELinuxAdmin(ComponentName who, boolean control, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case F**(*) = 8
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-
-            // Case TT*(T) = 2
-            // Case TF*(F) = 2
-            if (admin.isSELinuxAdmin == control) {
-                return true;
-            }
-
-            DevicePolicyData policy = getUserData(userHandle);
-            ActiveAdmin curAdmin = policy.findSELinuxAdminLocked();
-
-            // Case TFF(T) = 1
-            if (control && curAdmin == null) {
-                Slog.v(TAG, "SELinux admin set to " + admin.info.getComponent());
-                admin.isSELinuxAdmin = true;
-
-                admin.sebools = new HashMap<String, Boolean>(seboolsOrig.size());
-                Set<String> seboolnames = seboolsOrig.keySet();
-                for (String sebool : seboolnames) {
-                    boolean value = seboolsOrig.get(sebool);
-                    admin.sebools.put(sebool, value);
-                }
-
-                saveSettingsLocked(userHandle);
-                return true;
-            }
-
-            // Case TTT(F) = 1
-            if (!control && curAdmin.equals(admin)) {
-                boolean setSEpolicyFile = admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEPOLICY];
-                boolean setPropertyContextsFile = admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_PROPCTXS];
-                boolean setFileContextsFile = admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_FILECTXS];
-                boolean setSEappContextsFile = admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEAPPCTXS];
-
-                Slog.v(TAG, admin.info.getComponent() + " is no longer a SELinux admin");
-
-                admin.isSELinuxAdmin = false;
-                admin.enforceSELinux = false;
-                admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEPOLICY] = false;
-                admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_PROPCTXS] = false;
-                admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_FILECTXS] = false;
-                admin.isCustomPolicyFile[DevicePolicyManager.SEPOLICY_FILE_SEAPPCTXS] = false;
-
-                saveSettingsLocked(userHandle);
-                syncSELinuxPolicyLocked(policy, setSEpolicyFile,
-                        setPropertyContextsFile, setFileContextsFile,
-                        setSEappContextsFile);
-                return true;
-            }
-
-            //Case TTF(F) = 1
-            //Case TFT(T) = 1
-            return false;
-        }
-    }
-
-    @Override
-    public boolean getSELinuxEnforcing(ComponentName who, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case: F** = 4
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-            // Case: T** = 4
-            return admin.isSELinuxAdmin && admin.enforceSELinux;
-        }
-    }
-
-    @Override
-    public boolean setSELinuxEnforcing(ComponentName who, boolean enforcing, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case F**(*) = 8
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-
-            // Case TF*(*) = 4
-            if (!admin.isSELinuxAdmin) {
-                return false;
-            }
-
-            // Case TT*(*) = 4
-            if (admin.enforceSELinux != enforcing) {
-                admin.enforceSELinux = enforcing;
-                saveSettingsLocked(userHandle);
-            }
-            DevicePolicyData policy = getUserData(userHandle);
-            return syncSELinuxPolicyLocked(policy, false);
-        }
-    }
-
-    @Override
-    public List<String> getSELinuxBooleanNames(ComponentName who, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return null;
-            }
-            // Case F** = 4
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-
-            // Case TF* = 2
-            if (!admin.isSELinuxAdmin) {
-                return null;
-            }
-
-            // Case TT* = 2
-            return new ArrayList<String>(admin.sebools.keySet());
-        }
-    }
-
-    @Override
-    public boolean getSELinuxBooleanValue(ComponentName who, String name, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case F** = 4
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-
-            // Case TF* = 2
-            if (!admin.isSELinuxAdmin) {
-                return false;
-            }
-
-            // Case TT* = 2
-            return admin.sebools.containsKey(name) && admin.sebools.get(name);
-        }
-    }
-
-    @Override
-    public boolean setSELinuxBooleanValue(ComponentName who, String name, boolean value,
-            int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_SELINUX);
-
-            if (!admin.isSELinuxAdmin) {
-                return false;
-            }
-
-            if (!admin.sebools.containsKey(name)) {
-                throw new IllegalArgumentException(name + " is not a valid SELinux boolean");
-            }
-
-            if (value != admin.sebools.put(name, value)) {
-                saveSettingsLocked(userHandle);
-            }
-            DevicePolicyData policy = getUserData(userHandle);
-            return syncSELinuxPolicyLocked(policy, false);
-        }
-    }
-
-    // Possible MMAC Admin API states:
-    //  1: Caller has ENFORCE_MMAC = {T,F}
-    //  2: Caller is a MMAC admin = {T,F}
-    //  3: There is a MMAC admin on the system = {T,F}
-    // Invariants:
-    //  a) 1=F -> 2=F
-    //  b) 3=F -> 2=F for all admin apps
-    // States:
-    //  TTT, TTF, TFT, TFF, FTT, FTF, FFT, FFF
-    //  TTT,      TFT, TFF,           FFT, FFF
-    //       TTF fails b,
-    //                      FTT fails a
-    //                           FTF fails a,b
-
-    private boolean syncMMACpolicyLocked(DevicePolicyData policy, boolean removePolicy) {
-        return syncMMACpolicyLocked(policy, removePolicy, false);
-    }
-
-    /**
-     * Sync's the current MMAC admin's policies to the device. If there is
-     * no MMAC admin, then this will set MMAC to permissive mode
-     * and may remove the {@link MMAC_POLICY_PATH} file.
-     * @return true if policies were synced successfully
-     */
-    private boolean syncMMACpolicyLocked(DevicePolicyData policy, boolean removePolicy,
-                                         boolean firstBoot) {
-        if (policy.mUserHandle != UserHandle.USER_OWNER) {
-            return false;
-        }
-
-        ActiveAdmin mmacAdmin = policy.findMMACadminLocked();
-        if (mmacAdmin == null) {
-            return false;
-        }
-
-        boolean systemState = SystemProperties.getBoolean(MMAC_ENFORCE_PROPERTY, false);
-        boolean enforceMMAC = mmacAdmin.enforceMMAC;
-        if (!firstBoot || !systemState) {
-            if (systemState != enforceMMAC) {
-                Slog.v(TAG, "Changed MMAC enforcing status " + systemState + " to " + enforceMMAC);
-                SystemProperties.set(MMAC_ENFORCE_PROPERTY, enforceMMAC ? "true" : "false");
-            }
-        }
-
-        boolean ret = true;
-        if (removePolicy) {
-            File polFile;
-            polFile = new File(MMAC_POLICY_PATH);
-            if (polFile.exists() && !polFile.delete()) {
-                ret = false;
-            }
-        }
-        return ret;
-    }
-
-    // Cases = 8
-    @Override
-    public boolean isMMACadmin(ComponentName who, int userHandle) {
-        //Uses very similar code to the SELinux version
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set MMAC settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set MMAC settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case F** = 4
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_MMAC);
-            // Case T** = 4
-            return admin.isMMACadmin;
-        }
-    }
-
-    // Cases = 16
-    @Override
-    public boolean setMMACadmin(ComponentName who, boolean control, int userHandle) {
-        //Uses very similar code to the SELinux version
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set MMAC settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set MMAC settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case F**(*) = 8
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_MMAC);
-
-            // Case TT*(T) = 2
-            // Case TF*(F) = 2
-            if (admin.isMMACadmin == control) {
-                return true;
-            }
-
-            DevicePolicyData policy = getUserData(userHandle);
-            ActiveAdmin curAdmin = policy.findMMACadminLocked();
-
-            // Case TFF(T) = 1
-            if (control && curAdmin == null) {
-                Slog.v(TAG, "SE Android MMAC admin set to " + admin.info.getComponent());
-                admin.isMMACadmin = true;
-                saveSettingsLocked(userHandle);
-                return true;
-            }
-
-            // Case TTT(F) = 1
-            if (!control && curAdmin.equals(admin)) {
-                boolean setMMACpolicyFile = admin.isCustomPolicyFile[DevicePolicyManager.MMAC_POLICY_FILE];
-                Slog.v(TAG, admin.info.getComponent() + " is no longer a SE Android MMAC admin");
-
-                admin.isMMACadmin = false;
-                admin.enforceMMAC = false;
-                admin.isCustomPolicyFile[DevicePolicyManager.MMAC_POLICY_FILE] = false;
-
-                saveSettingsLocked(userHandle);
-                syncMMACpolicyLocked(policy, setMMACpolicyFile);
-                return true;
-            }
-        }
-
-        // Case TTF(F) = 1
-        // Case TFT(T) = 1
-        return false;
-    }
-
-    @Override
-    public boolean getMMACenforcing(ComponentName who, int userHandle) {
-        //Uses very similar code to the SELinux version
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set MMAC settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set MMAC settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case: F** = 4
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_MMAC);
-            // Case: T** = 4
-            return admin.isMMACadmin && admin.enforceMMAC;
-        }
-    }
-
-    @Override
-    public boolean setMMACenforcing(ComponentName who, boolean enforcing, int userHandle) {
-        //Uses very similar code to the SELinux version
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            // Only owner can set MMAC settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set MMAC settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            // Case F**(*) = 8
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    DeviceAdminInfo.USES_POLICY_ENFORCE_MMAC);
-
-            // Case TF*(*) = 4
-            if (!admin.isMMACadmin) {
-                return false;
-            }
-
-            // Case TT*(*) = 4
-            if (admin.enforceMMAC != enforcing) {
-                admin.enforceMMAC = enforcing;
-                saveSettingsLocked(userHandle);
-            }
-            DevicePolicyData policy = getUserData(userHandle);
-            return syncMMACpolicyLocked(policy, false);
-        }
-    }
-
-    @Override
-    public boolean isCustomPolicyFile(ComponentName who, int policyType, int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            if (policyType >= DevicePolicyManager.SEPOLICY_FILE_COUNT) {
-                throw new IllegalArgumentException("policyType is unknown");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-            PolicyFileDescription desc = POLICY_DESCRIPTIONS[policyType];
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who, desc.reqPolicy);
-            return desc.isPolicyAdmin(admin) && admin.isCustomPolicyFile[policyType];
-        }
-    }
-
-    @Override
-    public boolean setCustomPolicyFile(ComponentName who, int policyType, byte[] policy,
-            int userHandle) {
-        enforceCrossUserPermission(userHandle);
-        synchronized (this) {
-            // Check for permissions
-            if (who == null) {
-                throw new NullPointerException("ComponentName is null");
-            }
-            if (policyType >= DevicePolicyManager.SEPOLICY_FILE_COUNT) {
-                throw new IllegalArgumentException("policyType is unknown");
-            }
-            // Only owner can set SELinux settings
-            if (userHandle != UserHandle.USER_OWNER
-                    || UserHandle.getCallingUserId() != UserHandle.USER_OWNER) {
-                Slog.w(TAG, "Only owner is allowed to set SELinux settings. User "
-                        + UserHandle.getCallingUserId() + " is not permitted.");
-                return false;
-            }
-
-            PolicyFileDescription desc = POLICY_DESCRIPTIONS[policyType];
-            File polFile = new File(desc.path);
-            File polFileTmp = new File(desc.path + ".tmp");
-            ActiveAdmin admin = getActiveAdminForCallerLocked(who,
-                    desc.reqPolicy);
-            if (!desc.isPolicyAdmin(admin)) {
-                return false;
-            }
-
-            boolean newPolicy = policy != null;
-            if (newPolicy != admin.isCustomPolicyFile[policyType]) {
-                admin.isCustomPolicyFile[policyType] = newPolicy;
-                saveSettingsLocked(userHandle);
-            }
-            boolean ret = writePolicyFile(polFile, polFileTmp, policy);
-            if (ret) {
-                desc.doPolicyReload();
-            }
-            return ret;
-        }
-    }
-
-    /* Are there better ways than passing a byte[]? This might involve a lot
-     * of copying. Can we pass file descriptors? Can we pass a path (and what
-     * are the security implications)? If SELinux is enforcing, can system
-     * domain access another app's files?
-     *
-     * byte[] allows admin apps to set a policy without ever having to write
-     * the file to to storage, eg an admin app receiving a new policy file over
-     * data connection.
-     *
-     * We don't need to save this policy file somewhere in the ActiveAdmin/xml
-     * because it's written to /data/system, which is persistent.
-     */
-    private boolean writePolicyFile(File policyFile, File tempPolicyFile, byte[] policy) {
-        if (policy == null) {
-            if (policyFile.exists() && !policyFile.delete()) {
-                return false;
-            }
-            return true;
-        } else {
-            if (policy.length == 0) {
-                return false;
-            }
-            JournaledFile journal = new JournaledFile(policyFile, tempPolicyFile);
-            FileOutputStream stream = null;
-            try {
-                stream = new FileOutputStream(journal.chooseForWrite(), false);
-                stream.write(policy);
-                stream.flush();
-                stream.close();
-                journal.commit();
-            } catch (IOException err) {
-                if (stream != null) {
-                    try {
-                        stream.close();
-                    } catch (IOException ex) {
-                        //ignore
-                    }
-                }
-                journal.rollback();
-                Slog.w(TAG, err.toString());
-                return false;
-            }
-            return true;
         }
     }
 
@@ -3433,15 +2836,18 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
     static class DeviceOwner {
         private static final String DEVICE_OWNER_XML = "device_owner.xml";
         private static final String TAG_DEVICE_OWNER = "device-owner";
+        private static final String ATTR_NAME = "name";
         private static final String ATTR_PACKAGE = "package";
         private String mPackageName;
+        private String mOwnerName;
 
         DeviceOwner() {
             readOwnerFile();
         }
 
-        DeviceOwner(String packageName) {
+        DeviceOwner(String packageName, String ownerName) {
             this.mPackageName = packageName;
+            this.mOwnerName = ownerName;
         }
 
         static boolean isRegistered() {
@@ -3451,6 +2857,10 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
 
         String getPackageName() {
             return mPackageName;
+        }
+
+        String getName() {
+            return mOwnerName;
         }
 
         static boolean isInstalled(String packageName, PackageManager pm) {
@@ -3484,6 +2894,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                             "Device Owner file does not start with device-owner tag: found " + tag);
                 }
                 mPackageName = parser.getAttributeValue(null, ATTR_PACKAGE);
+                mOwnerName = parser.getAttributeValue(null, ATTR_NAME);
                 input.close();
             } catch (XmlPullParserException xppe) {
                 Slog.e(TAG, "Error parsing device-owner file\n" + xppe);
@@ -3508,6 +2919,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                 out.startDocument(null, true);
                 out.startTag(null, TAG_DEVICE_OWNER);
                 out.attribute(null, ATTR_PACKAGE, mPackageName);
+                if (mOwnerName != null) {
+                    out.attribute(null, ATTR_NAME, mOwnerName);
+                }
                 out.endTag(null, TAG_DEVICE_OWNER);
                 out.endDocument();
                 out.flush();

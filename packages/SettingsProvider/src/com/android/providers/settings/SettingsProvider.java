@@ -34,6 +34,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.pm.UserInfo;
 import android.content.res.AssetFileDescriptor;
 import android.database.AbstractCursor;
 import android.database.Cursor;
@@ -47,10 +48,10 @@ import android.os.Bundle;
 import android.os.DropBoxManager;
 import android.os.FileObserver;
 import android.os.ParcelFileDescriptor;
+import android.os.Process;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
-import android.provider.DrmStore;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -62,6 +63,8 @@ import android.util.SparseArray;
 public class SettingsProvider extends ContentProvider {
     private static final String TAG = "SettingsProvider";
     private static final boolean LOCAL_LOGV = false;
+
+    private static final boolean USER_CHECK_THROWS = true;
 
     private static final String TABLE_SYSTEM = "system";
     private static final String TABLE_SECURE = "secure";
@@ -479,6 +482,13 @@ public class SettingsProvider extends ContentProvider {
         try {
             final String value = c.moveToNext() ? c.getString(0) : null;
             if (value == null) {
+                // sanity-check the user before touching the db
+                final UserInfo user = mUserManager.getUserInfo(userHandle);
+                if (user == null) {
+                    // can happen due to races when deleting users; treat as benign
+                    return false;
+                }
+
                 final SecureRandom random = new SecureRandom();
                 final String newAndroidIdValue = Long.toHexString(random.nextLong());
                 final ContentValues values = new ContentValues();
@@ -492,7 +502,7 @@ public class SettingsProvider extends ContentProvider {
                 Slog.d(TAG, "Generated and saved new ANDROID_ID [" + newAndroidIdValue
                         + "] for user " + userHandle);
                 // Write a dropbox entry if it's a restricted profile
-                if (mUserManager.getUserInfo(userHandle).isRestricted()) {
+                if (user.isRestricted()) {
                     DropBoxManager dbm = (DropBoxManager)
                             getContext().getSystemService(Context.DROPBOX_SERVICE);
                     if (dbm != null && dbm.isTagEnabled(DROPBOX_TAG_USERLOG)) {
@@ -516,6 +526,14 @@ public class SettingsProvider extends ContentProvider {
 
     // Lazy initialize the database helper and caches for this user, if necessary
     private DatabaseHelper getOrEstablishDatabase(int callingUser) {
+        if (callingUser >= Process.SYSTEM_UID) {
+            if (USER_CHECK_THROWS) {
+                throw new IllegalArgumentException("Uid rather than user handle: " + callingUser);
+            } else {
+                Slog.wtf(TAG, "establish db for uid rather than user: " + callingUser);
+            }
+        }
+
         long oldId = Binder.clearCallingIdentity();
         try {
             DatabaseHelper dbHelper = mOpenHelpers.get(callingUser);
@@ -561,8 +579,7 @@ public class SettingsProvider extends ContentProvider {
      * Fast path that avoids the use of chatty remoted Cursors.
      */
     @Override
-    public Bundle callFromPackage(String callingPackage, String method, String request,
-            Bundle args) {
+    public Bundle call(String method, String request, Bundle args) {
         int callingUser = UserHandle.getCallingUserId();
         if (args != null) {
             int reqUser = args.getInt(Settings.CALL_METHOD_USER_KEY, callingUser);
@@ -617,7 +634,7 @@ public class SettingsProvider extends ContentProvider {
 
         // Also need to take care of app op.
         if (getAppOpsManager().noteOp(AppOpsManager.OP_WRITE_SETTINGS, Binder.getCallingUid(),
-                callingPackage) != AppOpsManager.MODE_ALLOWED) {
+                getCallingPackage()) != AppOpsManager.MODE_ALLOWED) {
             return null;
         }
 
@@ -993,7 +1010,7 @@ public class SettingsProvider extends ContentProvider {
         /*
          * When a client attempts to openFile the default ringtone or
          * notification setting Uri, we will proxy the call to the current
-         * default ringtone's Uri (if it is in the DRM or media provider).
+         * default ringtone's Uri (if it is in the media provider).
          */
         int ringtoneType = RingtoneManager.getDefaultType(uri);
         // Above call returns -1 if the Uri doesn't match a default type
@@ -1004,23 +1021,10 @@ public class SettingsProvider extends ContentProvider {
             Uri soundUri = RingtoneManager.getActualDefaultRingtoneUri(context, ringtoneType);
 
             if (soundUri != null) {
-                // Only proxy the openFile call to drm or media providers
+                // Proxy the openFile call to media provider
                 String authority = soundUri.getAuthority();
-                boolean isDrmAuthority = authority.equals(DrmStore.AUTHORITY);
-                if (isDrmAuthority || authority.equals(MediaStore.AUTHORITY) ||
+                if (authority.equals(MediaStore.AUTHORITY) ||
                         authority.equals(RingtoneManager.THEME_AUTHORITY)) {
-
-                    if (isDrmAuthority) {
-                        try {
-                            // Check DRM access permission here, since once we
-                            // do the below call the DRM will be checking our
-                            // permission, not our caller's permission
-                            DrmStore.enforceAccessDrmPermission(context);
-                        } catch (SecurityException e) {
-                            throw new FileNotFoundException(e.getMessage());
-                        }
-                    }
-
                     return context.getContentResolver().openFileDescriptor(soundUri, mode);
                 }
             }
@@ -1035,7 +1039,7 @@ public class SettingsProvider extends ContentProvider {
         /*
          * When a client attempts to openFile the default ringtone or
          * notification setting Uri, we will proxy the call to the current
-         * default ringtone's Uri (if it is in the DRM or media provider).
+         * default ringtone's Uri (if it is in the media provider).
          */
         int ringtoneType = RingtoneManager.getDefaultType(uri);
         // Above call returns -1 if the Uri doesn't match a default type
@@ -1046,23 +1050,11 @@ public class SettingsProvider extends ContentProvider {
             Uri soundUri = RingtoneManager.getActualDefaultRingtoneUri(context, ringtoneType);
 
             if (soundUri != null) {
-                // Only proxy the openFile call to drm or media providers
+                // Proxy the openFile call to media provider
                 String authority = soundUri.getAuthority();
-                boolean isDrmAuthority = authority.equals(DrmStore.AUTHORITY);
-                if (isDrmAuthority || authority.equals(MediaStore.AUTHORITY) ||
+                if (authority.equals(MediaStore.AUTHORITY) ||
                         authority.equals(RingtoneManager.THEME_AUTHORITY)) {
-
-                    if (isDrmAuthority) {
-                        try {
-                            // Check DRM access permission here, since once we
-                            // do the below call the DRM will be checking our
-                            // permission, not our caller's permission
-                            DrmStore.enforceAccessDrmPermission(context);
-                        } catch (SecurityException e) {
-                            throw new FileNotFoundException(e.getMessage());
-                        }
-                    }
-
+                    ParcelFileDescriptor pfd = null;
                     try {
                         return context.getContentResolver().openAssetFileDescriptor(soundUri, mode);
                     } catch (FileNotFoundException ex) {

@@ -50,8 +50,12 @@
     <!-- Margin at the edge of the screen to ignore touch events for in the windowshade. -->
     <dimen name="status_bar_edge_ignore">5dp</dimen>
 
-    <!-- Size of the fastscroll hint letter -->
+    <!-- Minimum size of the fastscroll overlay -->
     <dimen name="fastscroll_overlay_size">104dp</dimen>
+    <!-- Text size of the fastscroll overlay -->
+    <dimen name="fastscroll_overlay_text_size">24sp</dimen>
+    <!-- Padding of the fastscroll overlay -->
+    <dimen name="fastscroll_overlay_padding">16dp</dimen>
     <!-- Width of the fastscroll thumb -->
     <dimen name="fastscroll_thumb_width">64dp</dimen>
     <!-- Height of the fastscroll thumb -->
@@ -241,9 +245,6 @@
     <!-- Size of smaller notification text (see TextAppearance.StatusBar.EventContent.Line2, Info, Time) -->
     <dimen name="notification_subtext_size">12dp</dimen>
 
-    <!-- Lockscreen target insets -->
-    <item type="dimen" name="lockscreen_target_inset">30dp</item>
-
     <!-- Keyguard dimensions -->
     <!-- TEMP -->
     <dimen name="kg_security_panel_height">600dp</dimen>
@@ -310,10 +311,7 @@
     <dimen name="keyguard_security_width">320dp</dimen>
 
     <!-- Height of the sliding KeyguardSecurityContainer (includes 2x keyguard_security_view_margin) -->
-    <dimen name="keyguard_security_height">350dp</dimen>
-
-    <!-- Height of the sliding KeyguardSecurityContainer with hidden widget (includes 2x keyguard_security_view_margin) -->
-    <dimen name="keyguard_security_no_widget_height">450dp</dimen>
+    <dimen name="keyguard_security_height">400dp</dimen>
 
     <!-- Margin around the various security views -->
     <dimen name="keyguard_security_view_margin">8dp</dimen>
@@ -346,28 +344,18 @@
     security mode. -->
     <dimen name="kg_small_widget_height">160dp</dimen>
 
-    <!-- Left padding of num pad key on keyguard -->
-    <dimen name="kg_num_pad_key_padding_left">10dp</dimen>
+    <!-- Rounded corner radius for video subtitles. -->
+    <dimen name="subtitle_corner_radius">2dp</dimen>
 
-    <!-- Pie service: Distance a swipe must travel to be recognized as pie swipe.
-         Used by the pie service. -->
-    <dimen name="pie_trigger_distance">12dp</dimen>
+    <!-- Shadow radius for video subtitles. -->
+    <dimen name="subtitle_shadow_radius">2dp</dimen>
 
-    <!-- Pie service: This is the distance a swipe can travel orthogonally to its actual swipe
-         direction to be still recognized as pie swipe.
-         Used by the pie service. -->
-    <dimen name="pie_perpendicular_distance">15dp</dimen>
+    <!-- Shadow offset for video subtitles. -->
+    <dimen name="subtitle_shadow_offset">2dp</dimen>
 
-    <!-- Pie service: Thickness of the active trigger fields around the screen border -->
-    <dimen name="pie_trigger_thickness">12dp</dimen>
+    <!-- Outline width for video subtitles. -->
+    <dimen name="subtitle_outline_width">2dp</dimen>
 
-    <!-- Font size for notification text -->
-    <dimen name="glowpad_notification_font_size">12dp</dimen>
-
-    <!-- Radius of notification text -->
-    <dimen name="glowpad_notification_text_radius">60dp</dimen>
-
-    <!-- Top margin for overflow notifications shown in the P.O.R.N. view -->
-    <dimen name="glowpad_overflow_notifications_margin_top">48dp</dimen>
-
+    <!-- width of ImmersiveModeConfirmation (-1 for match_parent) -->
+    <dimen name="immersive_mode_cling_width">-1px</dimen>
 </resources>

@@ -31,7 +31,6 @@ import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityNodeProvider;
 
 /**
  * An AdapterView is a view whose children are determined by an {@link Adapter}.
@@ -281,7 +280,9 @@ public abstract class AdapterView<T extends Adapter> extends ViewGroup {
     }
 
     /**
-     * Call the OnItemClickListener, if it is defined.
+     * Call the OnItemClickListener, if it is defined. Performs all normal
+     * actions associated with clicking: reporting accessibility event, playing
+     * a sound, etc.
      *
      * @param view The view within the AdapterView that was clicked.
      * @param position The position of the view in the adapter.
@@ -291,11 +292,11 @@ public abstract class AdapterView<T extends Adapter> extends ViewGroup {
      */
     public boolean performItemClick(View view, int position, long id) {
         if (mOnItemClickListener != null) {
-            playSoundEffect(SoundEffectConstants.CLICK);
             if (view != null) {
                 view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
             }
             mOnItemClickListener.onItemClick(this, view, position, id);
+            playSoundEffect(SoundEffectConstants.CLICK);
             return true;
         }
 
@@ -1034,8 +1035,7 @@ public abstract class AdapterView<T extends Adapter> extends ViewGroup {
             checkSelectionChanged();
         }
 
-        //TODO: Hmm, we do not know the old state so this is sub-optimal
-        notifyAccessibilityStateChanged();
+        notifySubtreeAccessibilityStateChangedIfNeeded();
     }
 
     void checkSelectionChanged() {

@@ -21,9 +21,9 @@
 #include "PointerController.h"
 #include "InputListener.h"
 
-#include <androidfw/Input.h>
-#include <androidfw/VelocityControl.h>
-#include <androidfw/VelocityTracker.h>
+#include <input/Input.h>
+#include <input/VelocityControl.h>
+#include <input/VelocityTracker.h>
 #include <utils/KeyedVector.h>
 #include <utils/threads.h>
 #include <utils/Timers.h>
@@ -140,6 +140,9 @@ struct InputReaderConfiguration {
         // Stylus icon option changed.
         CHANGE_STYLUS_ICON_ENABLED = 1 << 6,
 
+        // Volume keys rotation option changed.
+        CHANGE_VOLUME_KEYS_ROTATION = 1 << 7,
+
         // All devices must be reopened.
         CHANGE_MUST_REOPEN = 1 << 31,
     };
@@ -230,6 +233,10 @@ struct InputReaderConfiguration {
     // True to show the pointer icon when a stylus is used.
     bool stylusIconEnabled;
 
+    // Remap volume keys according to display rotation
+    // 0 - disabled, 1 - phone or hybrid rotation mode, 2 - tablet rotation mode
+    int volumeKeysRotationMode;
+
     // Ignore finger touches this long after the stylus has been used (including hover)
     nsecs_t stylusPalmRejectionTime;
 
@@ -249,9 +256,10 @@ struct InputReaderConfiguration {
             pointerGestureSwipeMaxWidthRatio(0.25f),
             pointerGestureMovementSpeedRatio(0.8f),
             pointerGestureZoomSpeedRatio(0.3f),
-	    showTouches(false),
+            showTouches(false),
             stylusIconEnabled(false),
-            stylusPalmRejectionTime(50 * 10000000LL) // 50 ms
+            stylusPalmRejectionTime(50 * 10000000LL), // 50 ms
+            volumeKeysRotationMode(0)
     { }
 
     bool getDisplayInfo(bool external, DisplayViewport* outViewport) const;
@@ -421,7 +429,7 @@ public:
 
 protected:
     // These members are protected so they can be instrumented by test cases.
-    virtual InputDevice* createDeviceLocked(int32_t deviceId,
+    virtual InputDevice* createDeviceLocked(int32_t deviceId, int32_t controllerNumber,
             const InputDeviceIdentifier& identifier, uint32_t classes);
 
     class ContextImpl : public InputReaderContext {
@@ -519,16 +527,17 @@ private:
 /* Represents the state of a single input device. */
 class InputDevice {
 public:
-    InputDevice(InputReaderContext* context, int32_t id, int32_t generation,
-            const InputDeviceIdentifier& identifier, uint32_t classes);
+    InputDevice(InputReaderContext* context, int32_t id, int32_t generation, int32_t
+            controllerNumber, const InputDeviceIdentifier& identifier, uint32_t classes);
     ~InputDevice();
 
     inline InputReaderContext* getContext() { return mContext; }
-    inline int32_t getId() { return mId; }
-    inline int32_t getGeneration() { return mGeneration; }
-    inline const String8& getName() { return mIdentifier.name; }
-    inline uint32_t getClasses() { return mClasses; }
-    inline uint32_t getSources() { return mSources; }
+    inline int32_t getId() const { return mId; }
+    inline int32_t getControllerNumber() const { return mControllerNumber; }
+    inline int32_t getGeneration() const { return mGeneration; }
+    inline const String8& getName() const { return mIdentifier.name; }
+    inline uint32_t getClasses() const { return mClasses; }
+    inline uint32_t getSources() const { return mSources; }
 
     inline bool isExternal() { return mIsExternal; }
     inline void setExternal(bool external) { mIsExternal = external; }
@@ -585,6 +594,7 @@ public:
 private:
     InputReaderContext* mContext;
     int32_t mId;
+    int32_t mControllerNumber;
     int32_t mGeneration;
     InputDeviceIdentifier mIdentifier;
     String8 mAlias;
@@ -1043,7 +1053,8 @@ private:
     uint32_t mSource;
     int32_t mKeyboardType;
 
-    int32_t mOrientation; // orientation for dpad keys
+    int32_t mRotationMapOffset; // determines if and how volume keys rotate
+    int32_t mOrientation; // orientation for dpad and volume keys
 
     Vector<KeyDown> mKeyDowns; // keys that are down
     int32_t mMetaState;
@@ -1210,7 +1221,6 @@ protected:
             DEVICE_TYPE_TOUCH_SCREEN,
             DEVICE_TYPE_TOUCH_PAD,
             DEVICE_TYPE_TOUCH_NAVIGATION,
-            DEVICE_TYPE_GESTURE_SENSOR,
             DEVICE_TYPE_POINTER,
         };
 
@@ -1218,6 +1228,7 @@ protected:
         bool hasAssociatedDisplay;
         bool associatedDisplayIsExternal;
         bool orientationAware;
+        bool hasButtonUnderPad;
 
         enum GestureMode {
             GESTURE_MODE_POINTER,
@@ -1294,6 +1305,9 @@ protected:
             }
             if (haveSizeBias) {
                 *outSize += sizeBias;
+            }
+            if (*outSize < 0) {
+                *outSize = 0;
             }
         }
     } mCalibration;

@@ -16,31 +16,29 @@
 
 package com.android.systemui.statusbar.phone;
 
-import android.service.notification.StatusBarNotification;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
-import android.text.StaticLayout;
+import android.service.notification.StatusBarNotification;
 import android.text.Layout.Alignment;
+import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.view.View;
 import android.view.animation.AnimationUtils;
+import android.widget.ImageSwitcher;
 import android.widget.TextSwitcher;
 import android.widget.TextView;
-import android.widget.ImageSwitcher;
-
-import java.util.ArrayList;
 
 import com.android.internal.statusbar.StatusBarIcon;
-import com.android.internal.util.CharSequences;
-
 import com.android.systemui.R;
 import com.android.systemui.statusbar.StatusBarIconView;
 
+import java.util.ArrayList;
+
 public abstract class Ticker {
     private static final int TICKER_SEGMENT_DELAY = 3000;
-    
+
     private Context mContext;
     private Handler mHandler = new Handler();
     private ArrayList<Segment> mSegments = new ArrayList();
@@ -49,16 +47,6 @@ public abstract class Ticker {
     private ImageSwitcher mIconSwitcher;
     private TextSwitcher mTextSwitcher;
     private float mIconScale;
-    private TickerCallback mEvent;
-
-    public interface TickerCallback  
-    {  
-        public void updateTicker(StatusBarNotification notification, String text);
-    }  
-
-    public void setUpdateEvent(TickerCallback event) {
-        mEvent = event;
-    } 
 
     public static boolean isGraphicOrEmoji(char c) {
         int gc = Character.getType(c);
@@ -70,21 +58,21 @@ public abstract class Ticker {
                 && gc != Character.SPACE_SEPARATOR;
     }
 
-    public final class Segment {
-        public StatusBarNotification notification;
-        public Drawable icon;
-        public CharSequence text;
-        public int current;
-        public int next;
-        public boolean first; 
+    private final class Segment {
+        StatusBarNotification notification;
+        Drawable icon;
+        CharSequence text;
+        int current;
+        int next;
+        boolean first;
 
-        public StaticLayout getLayout(CharSequence substr) {
+        StaticLayout getLayout(CharSequence substr) {
             int w = mTextSwitcher.getWidth() - mTextSwitcher.getPaddingLeft()
                     - mTextSwitcher.getPaddingRight();
             return new StaticLayout(substr, mPaint, w, Alignment.ALIGN_NORMAL, 1, 0, true);
         }
 
-        public CharSequence rtrim(CharSequence substr, int start, int end) {
+        CharSequence rtrim(CharSequence substr, int start, int end) {
             while (end > start && !isGraphicOrEmoji(substr.charAt(end-1))) {
                 end--;
             }
@@ -95,7 +83,7 @@ public abstract class Ticker {
         }
 
         /** returns null if there is no more text */
-        public CharSequence getText() {
+        CharSequence getText() {
             if (this.current > this.text.length()) {
                 return null;
             }
@@ -114,7 +102,7 @@ public abstract class Ticker {
         }
 
         /** returns null if there is no more text */
-        public CharSequence advance() {
+        CharSequence advance() {
             this.first = false;
             int index = this.next;
             final int len = this.text.length();
@@ -147,7 +135,7 @@ public abstract class Ticker {
             return null;
         }
 
-        public Segment(StatusBarNotification n, Drawable icon, CharSequence text) {
+        Segment(StatusBarNotification n, Drawable icon, CharSequence text) {
             this.notification = n;
             this.icon = icon;
             this.text = text;
@@ -202,7 +190,7 @@ public abstract class Ticker {
             if (n.getPackageName().equals(seg.notification.getPackageName())
                     && n.getNotification().icon == seg.notification.getNotification().icon
                     && n.getNotification().iconLevel == seg.notification.getNotification().iconLevel
-                    && CharSequences.equals(seg.notification.getNotification().tickerText,
+                    && charSequencesEqual(seg.notification.getNotification().tickerText,
                         n.getNotification().tickerText)) {
                 return;
             }
@@ -225,27 +213,35 @@ public abstract class Ticker {
 
         mSegments.add(newSegment);
 
-	if (mEvent != null) {
-            if (newSegment != null) {
-                mEvent.updateTicker(newSegment.notification, text.toString());
-            }
-        } 
-
         if (initialCount == 0 && mSegments.size() > 0) {
             Segment seg = mSegments.get(0);
             seg.first = false;
-            
+
             mIconSwitcher.setAnimateFirstView(false);
             mIconSwitcher.reset();
             mIconSwitcher.setImageDrawable(seg.icon);
-            
+
             mTextSwitcher.setAnimateFirstView(false);
             mTextSwitcher.reset();
             mTextSwitcher.setText(seg.getText());
-            
+
             tickerStarting();
             scheduleAdvance();
         }
+    }
+
+    private static boolean charSequencesEqual(CharSequence a, CharSequence b) {
+        if (a.length() != b.length()) {
+            return false;
+        }
+
+        int length = a.length();
+        for (int i = 0; i < length; i++) {
+            if (a.charAt(i) != b.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void removeEntry(StatusBarNotification n) {

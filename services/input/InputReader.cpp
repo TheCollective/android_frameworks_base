@@ -42,8 +42,8 @@
 #include "InputReader.h"
 
 #include <cutils/log.h>
-#include <androidfw/Keyboard.h>
-#include <androidfw/VirtualKeyMap.h>
+#include <input/Keyboard.h>
+#include <input/VirtualKeyMap.h>
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -101,9 +101,10 @@ static inline const char* toString(bool value) {
 }
 
 static int32_t rotateValueUsingRotationMap(int32_t value, int32_t orientation,
-        const int32_t map[][4], size_t mapSize) {
+        const int32_t map[][4], size_t mapSize,
+        int32_t rotationMapOffset) {
     if (orientation != DISPLAY_ORIENTATION_0) {
-        for (size_t i = 0; i < mapSize; i++) {
+        for (size_t i = rotationMapOffset; i < mapSize; i++) {
             if (value == map[i][0]) {
                 return map[i][orientation];
             }
@@ -115,6 +116,16 @@ static int32_t rotateValueUsingRotationMap(int32_t value, int32_t orientation,
 static const int32_t keyCodeRotationMap[][4] = {
         // key codes enumerated counter-clockwise with the original (unrotated) key first
         // no rotation,        90 degree rotation,  180 degree rotation, 270 degree rotation
+
+        // volume keys - tablet
+        { AKEYCODE_VOLUME_UP,   AKEYCODE_VOLUME_UP,   AKEYCODE_VOLUME_DOWN, AKEYCODE_VOLUME_DOWN },
+        { AKEYCODE_VOLUME_DOWN, AKEYCODE_VOLUME_DOWN, AKEYCODE_VOLUME_UP,   AKEYCODE_VOLUME_UP },
+
+        // volume keys - phone or hybrid
+        { AKEYCODE_VOLUME_UP,   AKEYCODE_VOLUME_DOWN, AKEYCODE_VOLUME_DOWN, AKEYCODE_VOLUME_UP },
+        { AKEYCODE_VOLUME_DOWN, AKEYCODE_VOLUME_UP,   AKEYCODE_VOLUME_UP,   AKEYCODE_VOLUME_DOWN },
+
+        // dpad keys - common
         { AKEYCODE_DPAD_DOWN,   AKEYCODE_DPAD_RIGHT,  AKEYCODE_DPAD_UP,     AKEYCODE_DPAD_LEFT },
         { AKEYCODE_DPAD_RIGHT,  AKEYCODE_DPAD_UP,     AKEYCODE_DPAD_LEFT,   AKEYCODE_DPAD_DOWN },
         { AKEYCODE_DPAD_UP,     AKEYCODE_DPAD_LEFT,   AKEYCODE_DPAD_DOWN,   AKEYCODE_DPAD_RIGHT },
@@ -123,9 +134,11 @@ static const int32_t keyCodeRotationMap[][4] = {
 static const size_t keyCodeRotationMapSize =
         sizeof(keyCodeRotationMap) / sizeof(keyCodeRotationMap[0]);
 
-static int32_t rotateKeyCode(int32_t keyCode, int32_t orientation) {
+static int32_t rotateKeyCode(int32_t keyCode, int32_t orientation,
+        int32_t rotationMapOffset) {
     return rotateValueUsingRotationMap(keyCode, orientation,
-            keyCodeRotationMap, keyCodeRotationMapSize);
+            keyCodeRotationMap, keyCodeRotationMapSize,
+            rotationMapOffset);
 }
 
 static void rotateDelta(int32_t orientation, float* deltaX, float* deltaY) {
@@ -354,8 +367,9 @@ void InputReader::addDeviceLocked(nsecs_t when, int32_t deviceId) {
 
     InputDeviceIdentifier identifier = mEventHub->getDeviceIdentifier(deviceId);
     uint32_t classes = mEventHub->getDeviceClasses(deviceId);
+    int32_t controllerNumber = mEventHub->getDeviceControllerNumber(deviceId);
 
-    InputDevice* device = createDeviceLocked(deviceId, identifier, classes);
+    InputDevice* device = createDeviceLocked(deviceId, controllerNumber, identifier, classes);
     device->configure(when, &mConfig, 0);
     device->reset(when);
 
@@ -395,10 +409,10 @@ void InputReader::removeDeviceLocked(nsecs_t when, int32_t deviceId) {
     delete device;
 }
 
-InputDevice* InputReader::createDeviceLocked(int32_t deviceId,
+InputDevice* InputReader::createDeviceLocked(int32_t deviceId, int32_t controllerNumber,
         const InputDeviceIdentifier& identifier, uint32_t classes) {
     InputDevice* device = new InputDevice(&mContext, deviceId, bumpGenerationLocked(),
-            identifier, classes);
+            controllerNumber, identifier, classes);
 
     // External devices.
     if (classes & INPUT_DEVICE_CLASS_EXTERNAL) {
@@ -843,8 +857,8 @@ bool InputReaderThread::threadLoop() {
 // --- InputDevice ---
 
 InputDevice::InputDevice(InputReaderContext* context, int32_t id, int32_t generation,
-        const InputDeviceIdentifier& identifier, uint32_t classes) :
-        mContext(context), mId(id), mGeneration(generation),
+        int32_t controllerNumber, const InputDeviceIdentifier& identifier, uint32_t classes) :
+        mContext(context), mId(id), mGeneration(generation), mControllerNumber(controllerNumber),
         mIdentifier(identifier), mClasses(classes),
         mSources(0), mIsExternal(false), mDropUntilNextSync(false) {
 }
@@ -973,7 +987,6 @@ void InputDevice::process(const RawEvent* rawEvents, size_t count) {
                 ALOGD("Dropped input event while waiting for next input sync.");
 #endif
             }
-
         } else if (rawEvent->type == EV_SYN && rawEvent->code == SYN_DROPPED) {
             ALOGI("Detected input event buffer overrun for device %s.", getName().string());
             mDropUntilNextSync = true;
@@ -996,7 +1009,8 @@ void InputDevice::timeoutExpired(nsecs_t when) {
 }
 
 void InputDevice::getDeviceInfo(InputDeviceInfo* outDeviceInfo) {
-    outDeviceInfo->initialize(mId, mGeneration, mIdentifier, mAlias, mIsExternal);
+    outDeviceInfo->initialize(mId, mGeneration, mControllerNumber, mIdentifier, mAlias,
+            mIsExternal);
 
     size_t numMappers = mMappers.size();
     for (size_t i = 0; i < numMappers; i++) {
@@ -2040,10 +2054,16 @@ void KeyboardInputMapper::configure(nsecs_t when,
             mOrientation = DISPLAY_ORIENTATION_0;
         }
     }
+    if (!changes || (changes & InputReaderConfiguration::CHANGE_VOLUME_KEYS_ROTATION)) {
+        // mode 0 (disabled) ~ offset 4
+        // mode 1 (phone) ~ offset 2
+        // mode 2 (tablet) ~ offset 0
+        mRotationMapOffset = 4 - 2 * config->volumeKeysRotationMode;
+    }
 }
 
 void KeyboardInputMapper::configureParameters() {
-    mParameters.orientationAware = false;
+    mParameters.orientationAware = !getDevice()->isExternal();
     getDevice()->getConfiguration().tryGetProperty(String8("keyboard.orientationAware"),
             mParameters.orientationAware);
 
@@ -2117,7 +2137,8 @@ void KeyboardInputMapper::processKey(nsecs_t when, bool down, int32_t keyCode,
     if (down) {
         // Rotate key codes according to orientation if needed.
         if (mParameters.orientationAware && mParameters.hasAssociatedDisplay) {
-            keyCode = rotateKeyCode(keyCode, mOrientation);
+            keyCode = rotateKeyCode(keyCode, mOrientation,
+                    mRotationMapOffset);
         }
 
         // Add key down.
@@ -2661,6 +2682,7 @@ void TouchInputMapper::populateDeviceInfo(InputDeviceInfo* info) {
             info->addMotionRange(AMOTION_EVENT_AXIS_GENERIC_4, mSource, y.min, y.max, y.flat,
                     y.fuzz, y.resolution);
         }
+        info->setButtonUnderPad(mParameters.hasButtonUnderPad);
     }
 }
 
@@ -2827,6 +2849,9 @@ void TouchInputMapper::configureParameters() {
         mParameters.deviceType = Parameters::DEVICE_TYPE_POINTER;
     }
 
+    mParameters.hasButtonUnderPad=
+            getEventHub()->hasInputProperty(getDeviceId(), INPUT_PROP_BUTTONPAD);
+
     String8 deviceTypeString;
     if (getDevice()->getConfiguration().tryGetProperty(String8("touch.deviceType"),
             deviceTypeString)) {
@@ -2838,8 +2863,6 @@ void TouchInputMapper::configureParameters() {
             mParameters.deviceType = Parameters::DEVICE_TYPE_TOUCH_NAVIGATION;
         } else if (deviceTypeString == "pointer") {
             mParameters.deviceType = Parameters::DEVICE_TYPE_POINTER;
-        } else if (deviceTypeString == "gesture") {
-            mParameters.deviceType = Parameters::DEVICE_TYPE_GESTURE_SENSOR;
         } else if (deviceTypeString != "default") {
             ALOGW("Invalid value for touch.deviceType: '%s'", deviceTypeString.string());
         }
@@ -2887,9 +2910,6 @@ void TouchInputMapper::dumpParameters(String8& dump) {
         break;
     case Parameters::DEVICE_TYPE_POINTER:
         dump.append(INDENT4 "DeviceType: pointer\n");
-        break;
-    case Parameters::DEVICE_TYPE_GESTURE_SENSOR:
-        dump.append(INDENT4 "DeviceType: gesture\n");
         break;
     default:
         ALOG_ASSERT(false);
@@ -2944,9 +2964,6 @@ void TouchInputMapper::configureSurface(nsecs_t when, bool* outResetNeeded) {
     } else if (mParameters.deviceType == Parameters::DEVICE_TYPE_TOUCH_NAVIGATION) {
         mSource = AINPUT_SOURCE_TOUCH_NAVIGATION;
         mDeviceMode = DEVICE_MODE_NAVIGATION;
-    } else if (mParameters.deviceType == Parameters::DEVICE_TYPE_GESTURE_SENSOR) {
-        mSource = AINPUT_SOURCE_GESTURE_SENSOR;
-        mDeviceMode = DEVICE_MODE_UNSCALED;
     } else {
         mSource = AINPUT_SOURCE_TOUCHPAD;
         mDeviceMode = DEVICE_MODE_UNSCALED;
@@ -4291,8 +4308,8 @@ void TouchInputMapper::cookPointerData() {
             bottom = float(mRawPointerAxes.x.maxValue - rawLeft) * mXScale + mXTranslate;
             top = float(mRawPointerAxes.x.maxValue - rawRight) * mXScale + mXTranslate;
             orientation -= M_PI_2;
-            if (orientation < - M_PI_2) {
-                orientation += M_PI;
+            if (orientation < mOrientedRanges.orientation.min) {
+                orientation += (mOrientedRanges.orientation.max - mOrientedRanges.orientation.min);
             }
             break;
         case DISPLAY_ORIENTATION_180:
@@ -4302,6 +4319,10 @@ void TouchInputMapper::cookPointerData() {
             right = float(mRawPointerAxes.x.maxValue - rawLeft) * mXScale + mXTranslate;
             bottom = float(mRawPointerAxes.y.maxValue - rawTop) * mYScale + mYTranslate;
             top = float(mRawPointerAxes.y.maxValue - rawBottom) * mYScale + mYTranslate;
+            orientation -= M_PI;
+            if (orientation < mOrientedRanges.orientation.min) {
+                orientation += (mOrientedRanges.orientation.max - mOrientedRanges.orientation.min);
+            }
             break;
         case DISPLAY_ORIENTATION_270:
             x = float(mRawPointerAxes.y.maxValue - in.y) * mYScale + mYTranslate;
@@ -4311,8 +4332,8 @@ void TouchInputMapper::cookPointerData() {
             bottom = float(rawRight - mRawPointerAxes.x.minValue) * mXScale + mXTranslate;
             top = float(rawLeft - mRawPointerAxes.x.minValue) * mXScale + mXTranslate;
             orientation += M_PI_2;
-            if (orientation > M_PI_2) {
-                orientation -= M_PI;
+            if (orientation > mOrientedRanges.orientation.max) {
+                orientation -= (mOrientedRanges.orientation.max - mOrientedRanges.orientation.min);
             }
             break;
         default:
@@ -4685,6 +4706,14 @@ bool TouchInputMapper::preparePointerGestures(nsecs_t when,
                 mCurrentFingerIdBits, positions);
     }
 
+    // If the gesture ever enters a mode other than TAP, HOVER or TAP_DRAG, without first returning
+    // to NEUTRAL, then we should not generate tap event.
+    if (mPointerGesture.lastGestureMode != PointerGesture::HOVER
+            && mPointerGesture.lastGestureMode != PointerGesture::TAP
+            && mPointerGesture.lastGestureMode != PointerGesture::TAP_DRAG) {
+        mPointerGesture.resetTap();
+    }
+
     // Pick a new active touch id if needed.
     // Choose an arbitrary pointer that just went down, if there is one.
     // Otherwise choose an arbitrary remaining pointer.
@@ -4893,8 +4922,12 @@ bool TouchInputMapper::preparePointerGestures(nsecs_t when,
                 }
             } else {
 #if DEBUG_GESTURES
-                ALOGD("Gestures: Not a TAP, %0.3fms since down",
-                        (when - mPointerGesture.tapDownTime) * 0.000001f);
+                if (mPointerGesture.tapDownTime != LLONG_MIN) {
+                    ALOGD("Gestures: Not a TAP, %0.3fms since down",
+                            (when - mPointerGesture.tapDownTime) * 0.000001f);
+                } else {
+                    ALOGD("Gestures: Not a TAP, incompatible mode transitions");
+                }
 #endif
             }
         }

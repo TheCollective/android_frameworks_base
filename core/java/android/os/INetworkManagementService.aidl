@@ -1,6 +1,10 @@
 /* //device/java/android/android/os/INetworkManagementService.aidl
 **
 ** Copyright 2007, The Android Open Source Project
+** Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+**
+** Not a Contribution. Apache license notifications and license are
+** retained for attribution purposes only.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -19,6 +23,7 @@ package android.os;
 
 import android.net.InterfaceConfiguration;
 import android.net.INetworkManagementEventObserver;
+import android.net.LinkAddress;
 import android.net.NetworkStats;
 import android.net.RouteInfo;
 import android.net.wifi.WifiConfiguration;
@@ -117,6 +122,11 @@ interface INetworkManagementService
     void removeSecondaryRoute(String iface, in RouteInfo route);
 
     /**
+     * Set the specified MTU size
+     */
+    void setMtu(String iface, int mtu);
+
+    /**
      * Shuts down the service
      */
     void shutdown();
@@ -189,6 +199,16 @@ interface INetworkManagementService
     void disableNat(String internalInterface, String externalInterface);
 
     /**
+     * Add an upstream IPv6 interface
+     */
+    void addUpstreamV6Interface(String iface);
+
+    /**
+     * Remove an upstream IPv6 interface
+     */
+    void removeUpstreamV6Interface(String iface);
+
+    /**
      ** PPPD
      **/
 
@@ -254,11 +274,9 @@ interface INetworkManagementService
     NetworkStats getNetworkStatsUidDetail(int uid);
 
     /**
-     * Return summary of network statistics for the requested pairs of
-     * tethering interfaces.  Even indexes are remote interface, and odd
-     * indexes are corresponding local interfaces.
+     * Return summary of network statistics all tethering interfaces.
      */
-    NetworkStats getNetworkStatsTethering(in String[] ifacePairs);
+    NetworkStats getNetworkStatsTethering();
 
     /**
      * Set quota for an interface.
@@ -344,6 +362,61 @@ interface INetworkManagementService
     void setFirewallUidRule(int uid, boolean allow);
 
     /**
+     * Set all packets from users [uid_start,uid_end] to go through interface iface
+     * iface must already be set for marked forwarding by {@link setMarkedForwarding}
+     */
+    void setUidRangeRoute(String iface, int uid_start, int uid_end);
+
+    /**
+     * Clears the special routing rules for users [uid_start,uid_end]
+     */
+    void clearUidRangeRoute(String iface, int uid_start, int uid_end);
+
+    /**
+     * Setup an interface for routing packets marked by {@link setUidRangeRoute}
+     *
+     * This sets up a dedicated routing table for packets marked for {@code iface} and adds
+     * source-NAT rules so that the marked packets have the correct source address.
+     */
+    void setMarkedForwarding(String iface);
+
+    /**
+     * Removes marked forwarding for an interface
+     */
+    void clearMarkedForwarding(String iface);
+
+    /**
+     * Get the SO_MARK associated with routing packets for user {@code uid}
+     */
+    int getMarkForUid(int uid);
+
+    /**
+     * Get the SO_MARK associated with protecting packets from VPN routing rules
+     */
+    int getMarkForProtect();
+
+    /**
+     * Route all traffic in {@code route} to {@code iface} setup for marked forwarding
+     */
+    void setMarkedForwardingRoute(String iface, in RouteInfo route);
+
+    /**
+     * Clear routes set by {@link setMarkedForwardingRoute}
+     */
+    void clearMarkedForwardingRoute(String iface, in RouteInfo route);
+
+    /**
+     * Exempts {@code host} from the routing set up by {@link setMarkedForwardingRoute}
+     * All connects to {@code host} will use the global routing table
+     */
+    void setHostExemption(in LinkAddress host);
+
+    /**
+     * Clears an exemption set by {@link setHostExemption}
+     */
+    void clearHostExemption(in LinkAddress host);
+
+    /**
      * Set a process (pid) to use the name servers associated with the specified interface.
      */
     void setDnsInterfaceForPid(String iface, int pid);
@@ -352,6 +425,21 @@ interface INetworkManagementService
      * Clear a process (pid) from being associated with an interface.
      */
     void clearDnsInterfaceForPid(int pid);
+
+    /**
+    * Set a range of user ids to use the name servers associated with the specified interface.
+    */
+    void setDnsInterfaceForUidRange(String iface, int uid_start, int uid_end);
+
+    /**
+    * Clear a user range from being associated with an interface.
+    */
+    void clearDnsInterfaceForUidRange(int uid_start, int uid_end);
+
+    /**
+    * Clear the mappings from pid to Dns interface and from uid range to Dns interface.
+    */
+    void clearDnsInterfaceMaps();
 
     /**
      * Start the clatd (464xlat) service
@@ -367,4 +455,27 @@ interface INetworkManagementService
      * Determine whether the clatd (464xlat) service has been started
      */
     boolean isClatdStarted();
+
+   /**
+    ** Policy Routing
+    **/
+
+   /**
+    * Replaces a prexisting identical route with the new metric specified.
+    * Adds a new route if none existed before.
+    */
+   boolean addRouteWithMetric(String iface, int metric, in RouteInfo route);
+
+   /**
+    * Replaces a source policy route for the given iface in a custom routing
+    * table denoted by routeId, if it already exists.
+    * Adds a new route if it did not exist.
+    */
+   boolean replaceSrcRoute(String iface, in byte[] ip, in byte[] gateway, int routeId);
+
+   /**
+    * Deletes a source policy route for the given route identifier and source
+    * address from a custom routing table denoted by routeId
+    */
+   boolean delSrcRoute(in byte[] ip, int routeId);
 }

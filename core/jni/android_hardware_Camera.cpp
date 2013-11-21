@@ -385,6 +385,27 @@ void JNICameraContext::setCallbackMode(JNIEnv *env, bool installed, bool manualM
     }
 }
 
+static void android_hardware_Camera_setLongshot(JNIEnv *env, jobject thiz, jboolean enable)
+{
+    ALOGV("setLongshot");
+#ifdef QCOM_HARDWARE
+    JNICameraContext* context;
+    status_t rc;
+    sp<Camera> camera = get_native_camera(env, thiz, &context);
+    if (camera == 0) return;
+
+    if ( enable ) {
+        rc = camera->sendCommand(CAMERA_CMD_LONGSHOT_ON, 0, 0);
+    } else {
+        rc = camera->sendCommand(CAMERA_CMD_LONGSHOT_OFF, 0, 0);
+    }
+
+    if (rc != NO_ERROR) {
+       jniThrowException(env, "java/lang/RuntimeException", "enabling longshot mode failed");
+    }
+#endif
+}
+
 static void android_hardware_Camera_sendHistogramData(JNIEnv *env, jobject thiz)
  {
    ALOGV("sendHistogramData" );
@@ -588,7 +609,7 @@ static void android_hardware_Camera_setPreviewDisplay(JNIEnv *env, jobject thiz,
         }
     }
 
-    if (camera->setPreviewTexture(gbp) != NO_ERROR) {
+    if (camera->setPreviewTarget(gbp) != NO_ERROR) {
         jniThrowException(env, "java/io/IOException", "setPreviewTexture failed");
     }
 }
@@ -600,14 +621,10 @@ static void android_hardware_Camera_setPreviewTexture(JNIEnv *env,
     sp<Camera> camera = get_native_camera(env, thiz, NULL);
     if (camera == 0) return;
 
-    sp<BufferQueue> bufferQueue = NULL;
+    sp<IGraphicBufferProducer> producer = NULL;
     if (jSurfaceTexture != NULL) {
-        sp<GLConsumer> surfaceTexture =
-            SurfaceTexture_getSurfaceTexture(env, jSurfaceTexture);
-        if (surfaceTexture != NULL) {
-            bufferQueue = surfaceTexture->getBufferQueue();
-        }
-        else {
+        producer = SurfaceTexture_getProducer(env, jSurfaceTexture);
+        if (producer == NULL) {
             jniThrowException(env, "java/lang/IllegalArgumentException",
                     "SurfaceTexture already released in setPreviewTexture");
             return;
@@ -615,9 +632,33 @@ static void android_hardware_Camera_setPreviewTexture(JNIEnv *env,
 
     }
 
-    if (camera->setPreviewTexture(bufferQueue) != NO_ERROR) {
+    if (camera->setPreviewTarget(producer) != NO_ERROR) {
         jniThrowException(env, "java/io/IOException",
                 "setPreviewTexture failed");
+    }
+}
+
+static void android_hardware_Camera_setPreviewCallbackSurface(JNIEnv *env,
+        jobject thiz, jobject jSurface)
+{
+    ALOGV("setPreviewCallbackSurface");
+    JNICameraContext* context;
+    sp<Camera> camera = get_native_camera(env, thiz, &context);
+    if (camera == 0) return;
+
+    sp<IGraphicBufferProducer> gbp;
+    sp<Surface> surface;
+    if (jSurface) {
+        surface = android_view_Surface_getSurface(env, jSurface);
+        if (surface != NULL) {
+            gbp = surface->getIGraphicBufferProducer();
+        }
+    }
+    // Clear out normal preview callbacks
+    context->setCallbackMode(env, false, false);
+    // Then set up callback surface
+    if (camera->setPreviewCallbackTarget(gbp) != NO_ERROR) {
+        jniThrowException(env, "java/io/IOException", "setPreviewCallbackTarget failed");
     }
 }
 
@@ -664,6 +705,24 @@ static void android_hardware_Camera_setHasPreviewCallback(JNIEnv *env, jobject t
     // setCallbackMode will take care of setting the context flags and calling
     // camera->setPreviewCallbackFlags within a mutex for us.
     context->setCallbackMode(env, installed, manualBuffer);
+}
+
+static void android_hardware_Camera_setMetadataCb(JNIEnv *env, jobject thiz, jboolean mode)
+{
+    ALOGV("setMetadataCb: mode:%d", (int)mode);
+    JNICameraContext* context;
+    status_t rc;
+    sp<Camera> camera = get_native_camera(env, thiz, &context);
+    if (camera == 0) return;
+
+    if(mode == true)
+        rc = camera->sendCommand(CAMERA_CMD_METADATA_ON, 0, 0);
+    else
+        rc = camera->sendCommand(CAMERA_CMD_METADATA_OFF, 0, 0);
+
+    if (rc != NO_ERROR) {
+        jniThrowException(env, "java/lang/RuntimeException", "set metadata mode failed");
+    }
 }
 
 static void android_hardware_Camera_addCallbackBuffer(JNIEnv *env, jobject thiz, jbyteArray bytes, int msgType) {
@@ -931,6 +990,9 @@ static JNINativeMethod camMethods[] = {
   { "setPreviewTexture",
     "(Landroid/graphics/SurfaceTexture;)V",
     (void *)android_hardware_Camera_setPreviewTexture },
+  { "setPreviewCallbackSurface",
+    "(Landroid/view/Surface;)V",
+    (void *)android_hardware_Camera_setPreviewCallbackSurface },
   { "startPreview",
     "()V",
     (void *)android_hardware_Camera_startPreview },
@@ -958,9 +1020,15 @@ static JNINativeMethod camMethods[] = {
   { "native_setHistogramMode",
     "(Z)V",
      (void *)android_hardware_Camera_setHistogramMode },
+  { "native_setMetadataCb",
+    "(Z)V",
+    (void *)android_hardware_Camera_setMetadataCb },
   { "native_sendHistogramData",
     "()V",
      (void *)android_hardware_Camera_sendHistogramData },
+ { "native_setLongshot",
+     "(Z)V",
+      (void *)android_hardware_Camera_setLongshot },
   { "native_setParameters",
     "(Ljava/lang/String;)V",
     (void *)android_hardware_Camera_setParameters },

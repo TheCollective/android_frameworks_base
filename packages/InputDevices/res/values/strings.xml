@@ -12,6 +12,9 @@
     <!-- US English keyboard layout label. [CHAR LIMIT=35] -->
     <string name="keyboard_layout_english_us_label">English (US)</string>
 
+    <!-- US English (International style) keyboard layout label. [CHAR LIMIT=35] -->
+    <string name="keyboard_layout_english_us_intl">English (US), International style</string>
+
     <!-- US English (Colemak style) keyboard layout label. [CHAR LIMIT=35] -->
     <string name="keyboard_layout_english_us_colemak_label">English (US), Colemak style</string>
 
@@ -41,6 +44,9 @@
 
     <!-- Swiss German keyboard layout label. [CHAR LIMIT=35] -->
     <string name="keyboard_layout_swiss_german_label">Swiss German</string>
+
+    <!-- Armenian Eastern keyboard layout label. [CHAR LIMIT=35] -->
+    <string name="keyboard_layout_armenian_eastern_label">Armenian Eastern</string>
 
     <!-- Belgian keyboard layout label. [CHAR LIMIT=35] -->
     <string name="keyboard_layout_belgian">Belgian</string>
@@ -77,6 +83,9 @@
 
     <!-- Icelandic keyboard layout label. [CHAR LIMIT=35] -->
     <string name="keyboard_layout_icelandic">Icelandic</string>
+
+    <!-- Brazilian keyboard layout label. [CHAR LIMIT=35] -->
+    <string name="keyboard_layout_brazilian">Brazilian</string>
 
     <!-- Portuguese keyboard layout label. [CHAR LIMIT=35] -->
     <string name="keyboard_layout_portuguese">Portuguese</string>

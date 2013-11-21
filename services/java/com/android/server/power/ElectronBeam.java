@@ -16,7 +16,11 @@
 
 package com.android.server.power;
 
-import android.graphics.Bitmap;
+import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+
 import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
@@ -31,17 +35,13 @@ import android.util.FloatMath;
 import android.util.Slog;
 import android.view.Display;
 import android.view.DisplayInfo;
+import android.view.Surface.OutOfResourcesException;
 import android.view.Surface;
 import android.view.SurfaceControl;
 import android.view.SurfaceSession;
 
 import com.android.server.display.DisplayManagerService;
 import com.android.server.display.DisplayTransactionListener;
-
-import java.io.PrintWriter;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 
 /**
  * Bzzzoooop!  *crackle*
@@ -91,13 +91,11 @@ final class ElectronBeam {
     private EGLSurface mEglSurface;
     private boolean mSurfaceVisible;
     private float mSurfaceAlpha;
-    private int mElectronBeamMode;
-    private boolean mIsLandscape;
 
     // Texture names.  We only use one texture, which contains the screenshot.
     private final int[] mTexNames = new int[1];
     private boolean mTexNamesGenerated;
-    private float mTexMatrix[] = new float[16];
+    private final float mTexMatrix[] = new float[16];
 
     // Vertex and corresponding texture coordinates.
     // We have 4 2D vertices, so 8 elements.  The vertices form a quad.
@@ -119,9 +117,9 @@ final class ElectronBeam {
      */
     public static final int MODE_FADE = 2;
 
-    public ElectronBeam(DisplayManagerService displayManager, int mode) {
+
+    public ElectronBeam(DisplayManagerService displayManager) {
         mDisplayManager = displayManager;
-        mElectronBeamMode = mode;
     }
 
     /**
@@ -227,20 +225,11 @@ final class ElectronBeam {
             GLES10.glClearColor(0f, 0f, 0f, 1f);
             GLES10.glClear(GLES10.GL_COLOR_BUFFER_BIT);
 
-            if (mElectronBeamMode == 1 || (mElectronBeamMode == 2 && mIsLandscape)) {
-                // Draw the frame vertical.
-                if (level < VSTRETCH_DURATION) {
-                    drawHStretch(1.0f - (level / VSTRETCH_DURATION));
-                } else {
-                    drawVStretch(1.0f - ((level - VSTRETCH_DURATION) / HSTRETCH_DURATION));
-                }
+            // Draw the frame.
+            if (level < HSTRETCH_DURATION) {
+                drawHStretch(1.0f - (level / HSTRETCH_DURATION));
             } else {
-                // Draw the frame horizontal.
-                if (level < HSTRETCH_DURATION) {
-                    drawHStretch(1.0f - (level / HSTRETCH_DURATION));
-                } else {
-                    drawVStretch(1.0f - ((level - HSTRETCH_DURATION) / VSTRETCH_DURATION));
-                }
+                drawVStretch(1.0f - ((level - HSTRETCH_DURATION) / VSTRETCH_DURATION));
             }
             if (checkGlErrors("drawFrame")) {
                 return false;
@@ -331,10 +320,10 @@ final class ElectronBeam {
 
     /**
      * Draws a frame where the electron beam has been stretched out into
-     * a thin white horizontal line that fades as it expands outwards.
+     * a thin white horizontal line that fades as it collapses inwards.
      *
-     * @param stretch The stretch factor.  0.0 is no stretch / no fade,
-     * 1.0 is maximum stretch / maximum fade.
+     * @param stretch The stretch factor.  0.0 is maximum stretch / no fade,
+     * 1.0 is collapsed / maximum fade.
      */
     private void drawHStretch(float stretch) {
         // compute interpolation scale factor
@@ -350,7 +339,7 @@ final class ElectronBeam {
 
             // draw narrow fading white line
             setHStretchQuad(mVertexBuffer, mDisplayWidth, mDisplayHeight, ag);
-            GLES10.glColor4f(1.0f - ag, 1.0f - ag, 1.0f - ag, 1.0f);
+            GLES10.glColor4f(1.0f - ag*0.75f, 1.0f - ag*0.75f, 1.0f - ag*0.75f, 1.0f);
             GLES10.glDrawArrays(GLES10.GL_TRIANGLE_FAN, 0, 4);
 
             // clean up
@@ -358,31 +347,17 @@ final class ElectronBeam {
         }
     }
 
-    private void setVStretchQuad(FloatBuffer vtx, float dw, float dh, float a) {
-        final float w;
-        final float h;
-        if (mElectronBeamMode == 1 || (mElectronBeamMode == 2 && mIsLandscape)) {
-            w = dw - (dw * a);
-            h = dh + (dh * a);
-        } else {
-            w = dw + (dw * a);
-            h = dh - (dh * a);
-        }
+    private static void setVStretchQuad(FloatBuffer vtx, float dw, float dh, float a) {
+        final float w = dw + (dw * a);
+        final float h = dh - (dh * a);
         final float x = (dw - w) * 0.5f;
         final float y = (dh - h) * 0.5f;
         setQuad(vtx, x, y, w, h);
     }
 
-    private void setHStretchQuad(FloatBuffer vtx, float dw, float dh, float a) {
-        final float w;
-        final float h;
-        if (mElectronBeamMode == 1 || (mElectronBeamMode == 2 && mIsLandscape)) {
-            w = 1.0f;
-            h = dw + (dw * a);
-        } else {
-            w = dw + (dw * a);
-            h = 1.0f;
-        }
+    private static void setHStretchQuad(FloatBuffer vtx, float dw, float dh, float a) {
+        final float w = 2 * dw * (1.0f - a);
+        final float h = 1.0f;
         final float x = (dw - w) * 0.5f;
         final float y = (dh - h) * 0.5f;
         setQuad(vtx, x, y, w, h);
@@ -541,7 +516,7 @@ final class ElectronBeam {
                     mSurfaceControl = new SurfaceControl(mSurfaceSession,
                             "ElectronBeam", mDisplayWidth, mDisplayHeight,
                             PixelFormat.OPAQUE, flags);
-                } catch (SurfaceControl.OutOfResourcesException ex) {
+                } catch (OutOfResourcesException ex) {
                     Slog.e(TAG, "Unable to create surface.", ex);
                     return false;
                 }
@@ -551,7 +526,7 @@ final class ElectronBeam {
             mSurfaceControl.setSize(mDisplayWidth, mDisplayHeight);
             mSurface = new Surface();
             mSurface.copyFrom(mSurfaceControl);
-            
+
             mSurfaceLayout = new NaturalSurfaceLayout(mDisplayManager, mSurfaceControl);
             mSurfaceLayout.onDisplayTransaction();
         } finally {
@@ -709,7 +684,7 @@ final class ElectronBeam {
      * callback can be invoked on any thread, not necessarily the thread that
      * owns the electron beam.
      */
-    private final class NaturalSurfaceLayout implements DisplayTransactionListener {
+    private static final class NaturalSurfaceLayout implements DisplayTransactionListener {
         private final DisplayManagerService mDisplayManager;
         private SurfaceControl mSurfaceControl;
 
@@ -738,22 +713,18 @@ final class ElectronBeam {
                     case Surface.ROTATION_0:
                         mSurfaceControl.setPosition(0, 0);
                         mSurfaceControl.setMatrix(1, 0, 0, 1);
-                        mIsLandscape = false;
                         break;
                     case Surface.ROTATION_90:
                         mSurfaceControl.setPosition(0, displayInfo.logicalHeight);
                         mSurfaceControl.setMatrix(0, -1, 1, 0);
-                        mIsLandscape = true;
                         break;
                     case Surface.ROTATION_180:
                         mSurfaceControl.setPosition(displayInfo.logicalWidth, displayInfo.logicalHeight);
                         mSurfaceControl.setMatrix(-1, 0, 0, -1);
-                        mIsLandscape = false;
                         break;
                     case Surface.ROTATION_270:
                         mSurfaceControl.setPosition(displayInfo.logicalWidth, 0);
                         mSurfaceControl.setMatrix(0, 1, -1, 0);
-                        mIsLandscape = true;
                         break;
                 }
             }

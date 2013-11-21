@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2012 The Android Open Source Project
- * Copyright (C) 2013 The CyanogenMod Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +20,11 @@ import android.animation.LayoutTransition;
 import android.app.ActivityOptions;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.ContentObserver;
-import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
 import android.os.Vibrator;
@@ -37,8 +32,6 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.EventLog;
-import android.util.Slog;
-import android.view.IWindowManager;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,16 +44,12 @@ import com.android.internal.util.cm.NavigationRingHelpers;
 import com.android.internal.widget.multiwaveview.GlowPadView;
 import com.android.internal.widget.multiwaveview.GlowPadView.OnTriggerListener;
 import com.android.internal.widget.multiwaveview.TargetDrawable;
-
-import com.android.systemui.EventLogTags;
-import com.android.systemui.R;
 import com.android.systemui.cm.ActionTarget;
-import com.android.systemui.recent.StatusBarTouchProxy;
 import com.android.systemui.statusbar.BaseStatusBar;
 import com.android.systemui.statusbar.CommandQueue;
+import com.android.systemui.statusbar.StatusBarPanel;
+import com.android.systemui.statusbar.phone.KeyguardTouchDelegate;
 import com.android.systemui.statusbar.phone.PhoneStatusBar;
-import com.android.systemui.statusbar.tablet.StatusBarPanel;
-import com.android.systemui.statusbar.tablet.TabletStatusBar;
 
 import java.util.ArrayList;
 
@@ -68,17 +57,17 @@ public class SearchPanelView extends FrameLayout implements
         StatusBarPanel, ActivityOptions.OnAnimationStartedListener {
     private static final int SEARCH_PANEL_HOLD_DURATION = 0;
     static final String TAG = "SearchPanelView";
-    static final boolean DEBUG = TabletStatusBar.DEBUG || PhoneStatusBar.DEBUG || false;
+    static final boolean DEBUG = PhoneStatusBar.DEBUG || false;
     public static final boolean DEBUG_GESTURES = true;
+    private static final String ASSIST_ICON_METADATA_NAME =
+            "com.android.systemui.action_assist_icon";
     private final Context mContext;
     private BaseStatusBar mBar;
-    private StatusBarTouchProxy mStatusBarTouchProxy;
     private SettingsObserver mObserver;
 
     private boolean mShowing;
     private View mSearchTargetsContainer;
     private GlowPadView mGlowPadView;
-    private IWindowManager mWm;
 
     private ActionTarget mActionTarget;
     private String[] mTargetActivities;
@@ -92,9 +81,7 @@ public class SearchPanelView extends FrameLayout implements
     public SearchPanelView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mContext = context;
-        mWm = IWindowManager.Stub.asInterface(ServiceManager.getService("window"));
         mActionTarget = new ActionTarget(context);
-
         mObserver = new SettingsObserver(new Handler());
     }
 
@@ -155,7 +142,6 @@ public class SearchPanelView extends FrameLayout implements
         super.onFinishInflate();
         mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mSearchTargetsContainer = findViewById(R.id.search_panel_container);
-        mStatusBarTouchProxy = (StatusBarTouchProxy) findViewById(R.id.status_bar_touch_proxy);
         // TODO: fetch views
         mGlowPadView = (GlowPadView) findViewById(R.id.glow_pad_view);
         mGlowPadView.setOnTriggerListener(mGlowPadViewListener);
@@ -174,7 +160,7 @@ public class SearchPanelView extends FrameLayout implements
             mEndPosOffset =  2;
         }
 
-         // Add Initial Place Holder Targets
+        // Add Initial Place Holder Targets
         for (int i = 0; i < mStartPosOffset; i++) {
             targets.add(NavigationRingHelpers.getTargetDrawable(mContext, null));
         }
@@ -198,14 +184,7 @@ public class SearchPanelView extends FrameLayout implements
     }
 
     public boolean isInContentArea(int x, int y) {
-        if (pointInside(x, y, mSearchTargetsContainer)) {
-            return true;
-        } else if (mStatusBarTouchProxy != null &&
-                pointInside(x, y, mStatusBarTouchProxy)) {
-            return true;
-        } else {
-            return false;
-        }
+        return pointInside(x, y, mSearchTargetsContainer);
     }
 
     private final OnPreDrawListener mPreDrawListener = new ViewTreeObserver.OnPreDrawListener() {
@@ -228,7 +207,8 @@ public class SearchPanelView extends FrameLayout implements
 
     private boolean hasValidTargets() {
         for (String target : mTargetActivities) {
-            if (!TextUtils.isEmpty(target) && !target.equals(NavigationRingConstants.ACTION_NONE)) {
+            if (!TextUtils.isEmpty(target)
+                    && !target.equals(NavigationRingConstants.ACTION_NONE)) {
                 return true;
             }
         }
@@ -299,7 +279,6 @@ public class SearchPanelView extends FrameLayout implements
     @Override
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
-
         mObserver.observe();
     }
 
@@ -319,12 +298,6 @@ public class SearchPanelView extends FrameLayout implements
 
     public void setBar(BaseStatusBar bar) {
         mBar = bar;
-    }
-
-    public void setStatusBarView(final View statusBarView) {
-        if (mStatusBarTouchProxy != null) {
-            mStatusBarTouchProxy.setStatusBar(statusBarView);
-        }
     }
 
     @Override
@@ -376,7 +349,6 @@ public class SearchPanelView extends FrameLayout implements
                         false, this);
             }
         }
-
         void unobserve() {
             mContext.getContentResolver().unregisterContentObserver(this);
         }

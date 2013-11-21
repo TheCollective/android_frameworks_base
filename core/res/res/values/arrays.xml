@@ -17,20 +17,6 @@
 ** limitations under the License.
 */
 -->
-<!-- Copyright (C) 2013 The CyanogenMod Project
-
-     Licensed under the Apache License, Version 2.0 (the "License");
-     you may not use this file except in compliance with the License.
-     You may obtain a copy of the License at
-
-          http://www.apache.org/licenses/LICENSE-2.0
-
-     Unless required by applicable law or agreed to in writing, software
-     distributed under the License is distributed on an "AS IS" BASIS,
-     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     See the License for the specific language governing permissions and
-     limitations under the License.
--->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 
     <!-- Do not translate. These are all of the drawable resources that should be preloaded by
@@ -41,13 +27,6 @@
        <item>@drawable/btn_check_on_pressed_holo_dark</item>
        <item>@drawable/btn_check_on_holo_light</item>
        <item>@drawable/btn_check_on_holo_dark</item>
-       <item>@drawable/btn_check_on_holo_dark1</item>
-       <item>@drawable/btn_check_on_holo_dark2</item>
-       <item>@drawable/btn_check_on_holo_dark3</item>
-       <item>@drawable/btn_check_on_holo_dark4</item>
-       <item>@drawable/btn_check_on_holo_dark5</item>
-       <item>@drawable/btn_check_on_holo_dark6</item>
-       <item>@drawable/btn_check_on_holo_dark7</item>
        <item>@drawable/btn_check_on_focused_holo_light</item>
        <item>@drawable/btn_check_on_focused_holo_dark</item>
        <item>@drawable/btn_check_on_disabled_holo_light</item>
@@ -66,7 +45,6 @@
        <item>@drawable/btn_check_off_disabled_focused_holo_dark</item>
        <item>@drawable/btn_check_holo_light</item>
        <item>@drawable/btn_check_holo_dark</item>
-       <item>@drawable/btn_check_on_animation</item>
        <item>@drawable/btn_radio_on_pressed_holo_light</item>
        <item>@drawable/btn_radio_on_pressed_holo_dark</item>
        <item>@drawable/btn_radio_on_holo_light</item>
@@ -368,97 +346,4 @@
         <item>中文 (繁體)</item>
     </string-array>
 
-    <!-- Resources for GlowPadView in LockScreen -->
-    <array name="lockscreen_targets_when_silent">
-        <item>@drawable/ic_lockscreen_unlock</item>
-        <item>@drawable/ic_action_assist_generic</item>
-        <item>@drawable/ic_lockscreen_soundon</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_target_descriptions_when_silent">
-        <item>@string/description_target_unlock</item>
-        <item>@string/description_target_search</item>
-        <item>@string/description_target_soundon</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_direction_descriptions">
-        <item>@string/description_direction_right</item>
-        <item>@string/description_direction_up</item>
-        <item>@string/description_direction_left</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_targets_when_soundon">
-        <item>@drawable/ic_lockscreen_unlock</item>
-        <item>@drawable/ic_action_assist_generic</item>
-        <item>@drawable/ic_lockscreen_silent</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_target_descriptions_when_soundon">
-        <item>@string/description_target_unlock</item>
-        <item>@string/description_target_search</item>
-        <item>@string/description_target_silent</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_targets_with_camera">
-        <item>@drawable/ic_lockscreen_unlock</item>
-        <item>@drawable/ic_action_assist_generic</item>
-        <item>@drawable/ic_lockscreen_camera</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_target_descriptions_with_camera">
-        <item>@string/description_target_unlock</item>
-        <item>@string/description_target_search</item>
-        <item>@string/description_target_camera</item>
-        <item>@null</item>
-    </array>
-
-    <array name="lockscreen_targets_unlock_only">
-        <item>@*android:drawable/ic_lockscreen_unlock</item>
-    </array>
-
-    <array name="lockscreen_target_descriptions_unlock_only">
-        <item>@*android:string/description_target_unlock</item>
-    </array>
-
-    <!-- list of 3- or 4-letter mnemonics for a 10-key numeric keypad -->
-    <string-array translatable="false" name="lockscreen_num_pad_klondike">
-        <item></item><!-- 0 -->
-        <item></item><!-- 1 -->
-        <item>ABC</item><!-- 2 -->
-        <item>DEF</item><!-- 3 -->
-        <item>GHI</item><!-- 4 -->
-        <item>JKL</item><!-- 5 -->
-        <item>MNO</item><!-- 6 -->
-        <item>PQRS</item><!-- 7 -->
-        <item>TUV</item><!-- 8 -->
-        <item>WXYZ</item><!-- 9 -->
-    </string-array>
-        <!-- Defines the shutdown options shown in the reboot dialog. -->
-    <array name="shutdown_reboot_options" translatable="false">
-        <item>@string/reboot_reboot</item>
-        <item>@string/reboot_recovery</item>
-        <item>@string/reboot_bootloader</item>
-    </array>
-
-    <!-- Do not translate. Defines the shutdown actions passed to the kernel.
-         The first item should be empty for regular reboot. -->
-    <string-array name="shutdown_reboot_actions" translatable="false">
-        <item></item>
-        <item>recovery</item>
-        <item>bootloader</item>
-    </string-array>
-
-    <!-- Do not translate. Defines the mapping of notification package names
-         from the actual triggering package to the user selectable package.
-         E.g. GTalk notifications come via Google Services Framework
-         Format: [triggering package]|[user package] -->
-    <string-array name="notification_light_package_mapping" translatable="false">
-        <item>com.google.android.gsf|com.google.android.talk</item>
-    </string-array>
 </resources>

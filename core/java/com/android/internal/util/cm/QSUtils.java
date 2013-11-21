@@ -1,15 +1,15 @@
 package com.android.internal.util.cm;
 
+import android.R;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.WifiDisplayStatus;
 import android.net.ConnectivityManager;
 import android.nfc.NfcAdapter;
-import android.os.UserHandle;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 
@@ -44,11 +44,6 @@ public class QSUtils {
             return (Settings.System.getInt(resolver, Settings.System.SYSTEM_PROFILES_ENABLED, 1) == 1);
         }
 
-        public static boolean expandedDesktopEnabled(ContentResolver resolver) {
-            return (Settings.System.getIntForUser(resolver, Settings.System.EXPANDED_DESKTOP_STYLE, 0,
-                    UserHandle.USER_CURRENT_OR_SELF) != 0);
-        }
-
         public static boolean deviceSupportsNfc(Context ctx) {
             return NfcAdapter.getDefaultAdapter(ctx) != null;
         }
@@ -58,12 +53,15 @@ public class QSUtils {
             return (tm.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE) || tm.getLteOnGsmMode() != 0;
         }
 
-        public static boolean deviceSupportsDockBattery(Context ctx) {
-            Resources res = ctx.getResources();
-            return res.getBoolean(com.android.internal.R.bool.config_hasDockBattery);
+        public static boolean deviceSupportsGps(Context context) {
+            return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS);
         }
 
-        public static boolean deviceSupportsCamera() {
-            return Camera.getNumberOfCameras() > 0;
+        public static boolean deviceSupportsTorch(Context context) {
+            return context.getResources().getBoolean(com.android.internal.R.bool.config_enableTorch);
+        }
+
+        public static boolean adbEnabled(ContentResolver resolver) {
+            return (Settings.Global.getInt(resolver, Settings.Global.ADB_ENABLED, 0)) == 1;
         }
 }

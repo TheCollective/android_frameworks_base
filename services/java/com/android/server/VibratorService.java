@@ -24,6 +24,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.hardware.input.InputManager;
+import android.os.BatteryStats;
 import android.os.Handler;
 import android.os.IVibratorService;
 import android.os.PowerManager;
@@ -44,8 +45,8 @@ import android.view.InputDevice;
 import com.android.internal.app.IAppOpsService;
 import com.android.internal.app.IBatteryStats;
 
-import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
@@ -144,7 +145,8 @@ public class VibratorService extends IVibratorService.Stub
         mWakeLock.setReferenceCounted(true);
 
         mAppOpsService = IAppOpsService.Stub.asInterface(ServiceManager.getService(Context.APP_OPS_SERVICE));
-        mBatteryStatsService = IBatteryStats.Stub.asInterface(ServiceManager.getService("batteryinfo"));
+        mBatteryStatsService = IBatteryStats.Stub.asInterface(ServiceManager.getService(
+                BatteryStats.SERVICE_NAME));
 
         mVibrations = new LinkedList<Vibration>();
 
@@ -179,6 +181,17 @@ public class VibratorService extends IVibratorService.Stub
         return doVibratorExists();
     }
 
+    private void verifyIncomingUid(int uid) {
+        if (uid == Binder.getCallingUid()) {
+            return;
+        }
+        if (Binder.getCallingPid() == Process.myPid()) {
+            return;
+        }
+        mContext.enforcePermission(android.Manifest.permission.UPDATE_APP_OPS_STATS,
+                Binder.getCallingPid(), Binder.getCallingUid(), null);
+    }
+
     private boolean inQuietHours() {
         boolean quietHoursEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
                 Settings.System.QUIET_HOURS_ENABLED, 0, UserHandle.USER_CURRENT_OR_SELF) != 0;
@@ -200,17 +213,6 @@ public class VibratorService extends IVibratorService.Stub
             }
         }
         return false;
-    }
-
-    private void verifyIncomingUid(int uid) {
-        if (uid == Binder.getCallingUid()) {
-            return;
-        }
-        if (Binder.getCallingPid() == Process.myPid()) {
-            return;
-        }
-        mContext.enforcePermission(android.Manifest.permission.UPDATE_APP_OPS_STATS,
-                Binder.getCallingPid(), Binder.getCallingUid(), null);
     }
 
     public void vibrate(int uid, String packageName, long milliseconds, IBinder token) {
@@ -367,7 +369,8 @@ public class VibratorService extends IVibratorService.Stub
     // Lock held on mVibrations
     private void startVibrationLocked(final Vibration vib) {
         try {
-            int mode = mAppOpsService.startOperation(AppOpsManager.OP_VIBRATE, vib.mUid, vib.mPackageName);
+            int mode = mAppOpsService.startOperation(AppOpsManager.getToken(mAppOpsService),
+                    AppOpsManager.OP_VIBRATE, vib.mUid, vib.mPackageName);
             if (mode != AppOpsManager.MODE_ALLOWED) {
                 if (mode == AppOpsManager.MODE_ERRORED) {
                     Slog.w(TAG, "Would be an error: vibrate from uid " + vib.mUid);
@@ -391,7 +394,8 @@ public class VibratorService extends IVibratorService.Stub
     private void reportFinishVibrationLocked() {
         if (mCurrentVibration != null) {
             try {
-                mAppOpsService.finishOperation(AppOpsManager.OP_VIBRATE, mCurrentVibration.mUid,
+                mAppOpsService.finishOperation(AppOpsManager.getToken(mAppOpsService),
+                        AppOpsManager.OP_VIBRATE, mCurrentVibration.mUid,
                         mCurrentVibration.mPackageName);
             } catch (RemoteException e) {
             }

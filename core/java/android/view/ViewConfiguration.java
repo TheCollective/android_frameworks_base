@@ -98,6 +98,13 @@ public class ViewConfiguration {
     private static final int DOUBLE_TAP_TIMEOUT = 300;
 
     /**
+     * Defines the minimum duration in milliseconds between the first tap's up event and
+     * the second tap's down event for an interaction to be considered a
+     * double-tap.
+     */
+    private static final int DOUBLE_TAP_MIN_TIME = 40;
+
+    /**
      * Defines the maximum duration in milliseconds between a touch pad
      * touch and release for a given touch to be considered a tap (click) as
      * opposed to a hover movement gesture.
@@ -221,9 +228,6 @@ public class ViewConfiguration {
     private final int mOverflingDistance;
     private final boolean mFadingMarqueeEnabled;
 
-    private boolean sHasPermanentMenuKey;
-    private boolean sHasPermanentMenuKeySet;
-
     private Context mContext;
 
     static final SparseArray<ViewConfiguration> sConfigurations =
@@ -292,16 +296,6 @@ public class ViewConfiguration {
 
         mOverscrollDistance = (int) (sizeAndDensity * OVERSCROLL_DISTANCE + 0.5f);
         mOverflingDistance = (int) (sizeAndDensity * OVERFLING_DISTANCE + 0.5f);
-
-        if (!sHasPermanentMenuKeySet) {
-            IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
-            try {
-                sHasPermanentMenuKey = !wm.hasSystemNavBar() && !wm.hasNavigationBar();
-                sHasPermanentMenuKeySet = true;
-            } catch (RemoteException ex) {
-                sHasPermanentMenuKey = false;
-            }
-        }
 
         mFadingMarqueeEnabled = res.getBoolean(
                 com.android.internal.R.bool.config_ui_enableFadingMarquee);
@@ -438,6 +432,17 @@ public class ViewConfiguration {
      */
     public static int getDoubleTapTimeout() {
         return DOUBLE_TAP_TIMEOUT;
+    }
+
+    /**
+     * @return the minimum duration in milliseconds between the first tap's
+     * up event and the second tap's down event for an interaction to be considered a
+     * double-tap.
+     *
+     * @hide
+     */
+    public static int getDoubleTapMinTime() {
+        return DOUBLE_TAP_MIN_TIME;
     }
 
     /**
@@ -683,9 +688,14 @@ public class ViewConfiguration {
      * @return true if a permanent menu key is present, false otherwise.
      */
     public boolean hasPermanentMenuKey() {
-        // Report no menu key if only soft buttons are available
-        if (!sHasPermanentMenuKey) {
-            return false;
+        IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
+        // Report no menu key if device has soft buttons
+        try {
+            if (wm.hasNavigationBar()) {
+                return false;
+            }
+        } catch (RemoteException ex) {
+            // do nothing, continue trying to guess
         }
 
         // Report no menu key if overflow button is forced to enabled
@@ -697,11 +707,10 @@ public class ViewConfiguration {
         }
 
         // Report menu key presence based on hardware key rebinding
-        IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
         try {
             return wm.hasMenuKeyEnabled();
         } catch (RemoteException ex) {
-            return sHasPermanentMenuKey;
+            return true;
         }
     }
 

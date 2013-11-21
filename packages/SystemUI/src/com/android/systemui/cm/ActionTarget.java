@@ -80,16 +80,11 @@ public class ActionTarget {
     }
 
     public boolean launchAction(String action, Bundle opts) {
-        try {
-            ActivityManagerNative.getDefault().dismissKeyguardOnNextActivity();
-        } catch (RemoteException e) {
-            // ignored
-        }
-
         if (TextUtils.isEmpty(action) || action.equals(ACTION_NONE)) {
             return false;
         } else if (action.equals(ACTION_RECENTS)) {
             try {
+                dismissKeyguard();
                 getStatusBarService().toggleRecentApps();
             } catch (RemoteException e) {
                 // ignored
@@ -118,6 +113,7 @@ public class ActionTarget {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
             try {
+                dismissKeyguard();
                 mContext.startActivityAsUser(intent, opts, UserHandle.CURRENT);
             } catch (ActivityNotFoundException e) {
                 Log.w(TAG, "Activity not found for " + intent.getAction());
@@ -167,6 +163,7 @@ public class ActionTarget {
             try {
                 Intent intent = Intent.parseUri(action, 0);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                dismissKeyguard();
                 mContext.startActivityAsUser(intent, UserHandle.CURRENT);
                 return true;
             } catch (URISyntaxException e) {
@@ -175,6 +172,14 @@ public class ActionTarget {
                 Log.e(TAG, "ActivityNotFound: [" + action + "]");
             }
             return false;
+        }
+    }
+
+    private void dismissKeyguard() {
+        try {
+            ActivityManagerNative.getDefault().dismissKeyguardOnNextActivity();
+        } catch (RemoteException e) {
+            // ignored
         }
     }
 

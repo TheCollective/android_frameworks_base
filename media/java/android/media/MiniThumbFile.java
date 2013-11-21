@@ -428,4 +428,3 @@ public class MiniThumbFile {
         return null;
     }
 }
-

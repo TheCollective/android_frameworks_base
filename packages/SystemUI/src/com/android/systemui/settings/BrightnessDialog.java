@@ -16,21 +16,18 @@
 
 package com.android.systemui.settings;
 
-import com.android.systemui.R;
-
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
-import java.lang.Runnable;
+import com.android.systemui.R;
 
 /** A dialog that provides controls for adjusting the screen brightness. */
 public class BrightnessDialog extends Dialog implements
@@ -43,7 +40,6 @@ public class BrightnessDialog extends Dialog implements
 
     private BrightnessController mBrightnessController;
     private ToggleSlider mSlider;
-    private View mSetupButtonPlaceholder;
     private View mSetupButtonDivider;
     private ImageView mSetupButton;
     private final int mBrightnessDialogLongTimeout;
@@ -86,7 +82,6 @@ public class BrightnessDialog extends Dialog implements
         setCanceledOnTouchOutside(true);
 
         mSlider = (ToggleSlider) findViewById(R.id.brightness_slider);
-        mSetupButtonPlaceholder = findViewById(R.id.brightness_setup_button_placeholder);
         mSetupButtonDivider = findViewById(R.id.brightness_setup_button_divider);
         mSetupButton = (ImageView) findViewById(R.id.brightness_setup_button);
         mSetupButton.setOnClickListener(new View.OnClickListener() {
@@ -129,7 +124,6 @@ public class BrightnessDialog extends Dialog implements
 
     private void updateSetupButtonVisibility() {
         boolean isAuto = mSlider.isChecked();
-        mSetupButtonPlaceholder.setVisibility(isAuto ? View.GONE : View.VISIBLE);
         mSetupButtonDivider.setVisibility(isAuto ? View.VISIBLE : View.GONE);
         mSetupButton.setVisibility(isAuto ? View.VISIBLE : View.GONE);
     }

@@ -33,8 +33,7 @@
         android:layout_height="match_parent"
         android:layout_alignParentBottom="true"
         android:clipToPadding="false"
-        android:clipChildren="false"
-        android:fitsSystemWindows="true">
+        android:clipChildren="false">
 
         <com.android.systemui.recent.RecentsHorizontalScrollView android:id="@+id/recents_container"
             android:layout_width="wrap_content"
@@ -49,19 +48,11 @@
                 android:layout_height="match_parent"
                 android:layoutDirection="ltr"
                 android:layout_gravity="left"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:fitsSystemWindows="true">
             </LinearLayout>
 
         </com.android.systemui.recent.RecentsHorizontalScrollView>
-
-        <ImageView
-            android:id="@+id/recents_clear"
-            android:clickable="true"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:scaleType="center"
-            android:layout_gravity="top|right"
-            android:src="@drawable/ic_recents_clear" />
 
     </FrameLayout>
 

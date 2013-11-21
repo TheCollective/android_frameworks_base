@@ -19,14 +19,13 @@ package android.net;
 import android.os.Environment;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.os.Environment.UserEnvironment;
 import android.os.StrictMode;
 import android.util.Log;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.Charsets;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1689,7 +1688,7 @@ public abstract class Uri implements Parcelable, Comparable<Uri> {
                     return "";
                 } else {
                     String encodedValue = query.substring(separator + 1, end);
-                    return UriCodec.decode(encodedValue, true, Charsets.UTF_8, false);
+                    return UriCodec.decode(encodedValue, true, StandardCharsets.UTF_8, false);
                 }
             }
 
@@ -1928,7 +1927,7 @@ public abstract class Uri implements Parcelable, Comparable<Uri> {
         if (s == null) {
             return null;
         }
-        return UriCodec.decode(s, false, Charsets.UTF_8, false);
+        return UriCodec.decode(s, false, StandardCharsets.UTF_8, false);
     }
 
     /**

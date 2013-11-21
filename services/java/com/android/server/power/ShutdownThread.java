@@ -150,12 +150,15 @@ public final class ShutdownThread extends Thread {
                 sConfirmDialog = null;
             }
             if (mReboot && !mRebootSafeMode) {
-                int advancedReboot = Settings.Secure.getInt(context.getContentResolver(),
-                        Settings.Secure.ADVANCED_REBOOT, 1);
-                KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-                boolean locked = km.inKeyguardRestrictedInputMode();
+                // Determine if primary user is logged in
+                boolean isPrimary = UserHandle.getCallingUserId() == UserHandle.USER_OWNER;
 
-                if ((advancedReboot == 1 && !locked) || advancedReboot == 2) {
+                // See if the advanced reboot menu is enabled (only if primary user) and check the keyguard state
+                boolean advancedReboot = isPrimary ? advancedRebootEnabled(context) : false;
+                KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+                boolean locked = km.inKeyguardRestrictedInputMode() && km.isKeyguardSecure();
+
+                if (advancedReboot && !locked) {
                     // Include options in power menu for rebooting into recovery or bootloader
                     sConfirmDialog = new AlertDialog.Builder(context)
                             .setTitle(titleResourceId)
@@ -216,6 +219,10 @@ public final class ShutdownThread extends Thread {
         } else {
             beginShutdownSequence(context);
         }
+    }
+
+    private static boolean advancedRebootEnabled(Context context) {
+        return Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.ADVANCED_REBOOT, 0) == 1;
     }
 
     private static class CloseDialogReceiver extends BroadcastReceiver
@@ -370,7 +377,9 @@ public final class ShutdownThread extends Thread {
 
         // First send the high-level shut down broadcast.
         mActionDone = false;
-        mContext.sendOrderedBroadcastAsUser(new Intent(Intent.ACTION_SHUTDOWN),
+        Intent intent = new Intent(Intent.ACTION_SHUTDOWN);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        mContext.sendOrderedBroadcastAsUser(intent,
                 UserHandle.ALL, null, br, mHandler, 0, null, null);
         
         final long endTime = SystemClock.elapsedRealtime() + MAX_BROADCAST_TIME;
@@ -528,7 +537,7 @@ public final class ShutdownThread extends Thread {
                             Log.e(TAG, "RemoteException during NFC shutdown", ex);
                             nfcOff = true;
                         }
-                        if (radioOff) {
+                        if (nfcOff) {
                             Log.i(TAG, "NFC turned off.");
                         }
                     }
@@ -563,11 +572,8 @@ public final class ShutdownThread extends Thread {
     public static void rebootOrShutdown(boolean reboot, String reason) {
         if (reboot) {
             Log.i(TAG, "Rebooting, reason: " + reason);
-            try {
-                PowerManagerService.lowLevelReboot(reason);
-            } catch (Exception e) {
-                Log.e(TAG, "Reboot failed, will attempt shutdown instead", e);
-            }
+            PowerManagerService.lowLevelReboot(reason);
+            Log.e(TAG, "Reboot failed, will attempt shutdown instead");
         } else if (SHUTDOWN_VIBRATE_MS > 0) {
             // vibrate before shutting down
             Vibrator vibrator = new SystemVibrator();

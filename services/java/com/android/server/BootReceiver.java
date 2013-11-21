@@ -127,6 +127,7 @@ public class BootReceiver extends BroadcastReceiver {
             addFileToDropBox(db, prefs, headers, "/data/dontpanic/apanic_threads",
                     -LOG_SIZE, "APANIC_THREADS");
             addAuditErrorsToDropBox(db, prefs, headers, -LOG_SIZE, "SYSTEM_AUDIT");
+            addFsckErrorsToDropBox(db, prefs, headers, -LOG_SIZE, "SYSTEM_FSCK");
         } else {
             if (db != null) db.addText("SYSTEM_RESTART", headers);
         }
@@ -161,6 +162,7 @@ public class BootReceiver extends BroadcastReceiver {
         if (db == null || !db.isTagEnabled(tag)) return;  // Logging disabled
 
         File file = new File(filename);
+        if (file.isDirectory()) return;  // Skip subdirectories (likely vendor-specific)
         long fileTime = file.lastModified();
         if (fileTime <= 0) return;  // File does not exist
 
@@ -202,5 +204,32 @@ public class BootReceiver extends BroadcastReceiver {
         }
         Slog.i(TAG, "Copied " + sb.toString().length() + " worth of audits to DropBox");
         db.addText(tag, headers + sb.toString());
+    }
+
+    private static void addFsckErrorsToDropBox(DropBoxManager db,  SharedPreferences prefs,
+            String headers, int maxSize, String tag) throws IOException {
+        boolean upload_needed = false;
+        if (db == null || !db.isTagEnabled(tag)) return;  // Logging disabled
+        Slog.i(TAG, "Checking for fsck errors");
+
+        File file = new File("/dev/fscklogs/log");
+        long fileTime = file.lastModified();
+        if (fileTime <= 0) return;  // File does not exist
+
+        String log = FileUtils.readTextFile(file, maxSize, "[[TRUNCATED]]\n");
+        StringBuilder sb = new StringBuilder();
+        for (String line : log.split("\n")) {
+            if (line.contains("FILE SYSTEM WAS MODIFIED")) {
+                upload_needed = true;
+                break;
+            }
+        }
+
+        if (upload_needed) {
+            addFileToDropBox(db, prefs, headers, "/dev/fscklogs/log", maxSize, tag);
+        }
+
+        // Remove the file so we don't re-upload if the runtime restarts.
+        file.delete();
     }
 }

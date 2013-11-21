@@ -29,6 +29,7 @@
 #include "jni.h"
 #include <limits.h>
 #include <android_runtime/AndroidRuntime.h>
+#include <android_runtime/Log.h>
 
 #include <utils/Log.h>
 #include <utils/Looper.h>
@@ -177,6 +178,7 @@ public:
     void setPointerSpeed(int32_t speed);
     void setShowTouches(bool enabled);
     void setStylusIconEnabled(bool enabled);
+    void setVolumeKeysRotation(int mode);
 
     /* --- InputReaderPolicyInterface implementation --- */
 
@@ -192,7 +194,8 @@ public:
             uint32_t policyFlags);
     virtual void notifyConfigurationChanged(nsecs_t when);
     virtual nsecs_t notifyANR(const sp<InputApplicationHandle>& inputApplicationHandle,
-            const sp<InputWindowHandle>& inputWindowHandle);
+            const sp<InputWindowHandle>& inputWindowHandle,
+            const String8& reason);
     virtual void notifyInputChannelBroken(const sp<InputWindowHandle>& inputWindowHandle);
     virtual bool filterInputEvent(const InputEvent* inputEvent, uint32_t policyFlags);
     virtual void getDispatcherConfiguration(InputDispatcherConfiguration* outConfig);
@@ -240,6 +243,9 @@ private:
         // Show icon when stylus is used
         bool stylusIconEnabled;
 
+        // Volume keys rotation mode (0 - off, 1 - phone, 2 - tablet)
+        int32_t volumeKeysRotationMode;
+
         // Sprite controller singleton, created on first use.
         sp<SpriteController> spriteController;
 
@@ -279,6 +285,7 @@ NativeInputManager::NativeInputManager(jobject contextObj,
         mLocked.pointerGesturesEnabled = true;
         mLocked.showTouches = false;
         mLocked.stylusIconEnabled = false;
+        mLocked.volumeKeysRotationMode = 0;
     }
 
     sp<EventHub> eventHub = new EventHub();
@@ -412,6 +419,7 @@ void NativeInputManager::getReaderConfiguration(InputReaderConfiguration* outCon
         outConfig->showTouches = mLocked.showTouches;
 
         outConfig->stylusIconEnabled = mLocked.stylusIconEnabled;
+        outConfig->volumeKeysRotationMode = mLocked.volumeKeysRotationMode;
 
         outConfig->setDisplayInfo(false /*external*/, mLocked.internalViewport);
         outConfig->setDisplayInfo(true /*external*/, mLocked.externalViewport);
@@ -561,7 +569,7 @@ void NativeInputManager::notifyConfigurationChanged(nsecs_t when) {
 }
 
 nsecs_t NativeInputManager::notifyANR(const sp<InputApplicationHandle>& inputApplicationHandle,
-        const sp<InputWindowHandle>& inputWindowHandle) {
+        const sp<InputWindowHandle>& inputWindowHandle, const String8& reason) {
 #if DEBUG_INPUT_DISPATCHER_POLICY
     ALOGD("notifyANR");
 #endif
@@ -572,15 +580,18 @@ nsecs_t NativeInputManager::notifyANR(const sp<InputApplicationHandle>& inputApp
             getInputApplicationHandleObjLocalRef(env, inputApplicationHandle);
     jobject inputWindowHandleObj =
             getInputWindowHandleObjLocalRef(env, inputWindowHandle);
+    jstring reasonObj = env->NewStringUTF(reason.string());
 
     jlong newTimeout = env->CallLongMethod(mServiceObj,
-                gServiceClassInfo.notifyANR, inputApplicationHandleObj, inputWindowHandleObj);
+                gServiceClassInfo.notifyANR, inputApplicationHandleObj, inputWindowHandleObj,
+                reasonObj);
     if (checkAndClearExceptionFromCallback(env, "notifyANR")) {
         newTimeout = 0; // abort dispatch
     } else {
         assert(newTimeout >= 0);
     }
 
+    env->DeleteLocalRef(reasonObj);
     env->DeleteLocalRef(inputWindowHandleObj);
     env->DeleteLocalRef(inputApplicationHandleObj);
     return newTimeout;
@@ -750,6 +761,22 @@ void NativeInputManager::setStylusIconEnabled(bool enabled) {
 
     mInputManager->getReader()->requestRefreshConfiguration(
             InputReaderConfiguration::CHANGE_STYLUS_ICON_ENABLED);
+}
+
+void NativeInputManager::setVolumeKeysRotation(int mode) {
+    { // acquire lock
+        AutoMutex _l(mLock);
+
+        if (mLocked.volumeKeysRotationMode == mode) {
+            return;
+        }
+
+        ALOGI("Volume keys: rotation mode set to %d.", mode);
+        mLocked.volumeKeysRotationMode = mode;
+    } // release lock
+
+    mInputManager->getReader()->requestRefreshConfiguration(
+            InputReaderConfiguration::CHANGE_VOLUME_KEYS_ROTATION);
 }
 
 bool NativeInputManager::isScreenOn() {
@@ -1255,6 +1282,13 @@ static void nativeSetStylusIconEnabled(JNIEnv* env,
     im->setStylusIconEnabled(enabled);
 }
 
+static void nativeSetVolumeKeysRotation(JNIEnv* env,
+        jclass clazz, jint ptr, int mode) {
+    NativeInputManager* im = reinterpret_cast<NativeInputManager*>(ptr);
+
+    im->setVolumeKeysRotation(mode);
+}
+
 static void nativeVibrate(JNIEnv* env,
         jclass clazz, jint ptr, jint deviceId, jlongArray patternObj,
         jint repeat, jint token) {
@@ -1362,6 +1396,8 @@ static JNINativeMethod gInputManagerMethods[] = {
             (void*) nativeSetShowTouches },
     { "nativeSetStylusIconEnabled", "(IZ)V",
             (void*) nativeSetStylusIconEnabled },
+    { "nativeSetVolumeKeysRotation", "(II)V",
+            (void*) nativeSetVolumeKeysRotation },
     { "nativeVibrate", "(II[JII)V",
             (void*) nativeVibrate },
     { "nativeCancelVibrate", "(III)V",
@@ -1412,7 +1448,7 @@ int register_android_server_InputManager(JNIEnv* env) {
 
     GET_METHOD_ID(gServiceClassInfo.notifyANR, clazz,
             "notifyANR",
-            "(Lcom/android/server/input/InputApplicationHandle;Lcom/android/server/input/InputWindowHandle;)J");
+            "(Lcom/android/server/input/InputApplicationHandle;Lcom/android/server/input/InputWindowHandle;Ljava/lang/String;)J");
 
     GET_METHOD_ID(gServiceClassInfo.filterInputEvent, clazz,
             "filterInputEvent", "(Landroid/view/InputEvent;I)Z");
