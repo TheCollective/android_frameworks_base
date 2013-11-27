@@ -292,8 +292,9 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
 
         // next: reboot
         // only shown if enabled, enabled by default
-        if (Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.POWER_MENU_REBOOT_ENABLED, 1) == 1) {
+        boolean showReboot = Settings.System.getIntForUser(cr,
+                Settings.System.POWER_MENU_REBOOT_ENABLED, 1, UserHandle.USER_CURRENT) == 1;
+        if (showReboot) {
             mItems.add(
                 new SinglePressAction(R.drawable.ic_lock_reboot, R.string.global_action_reboot) {
                     public void onPress() {
@@ -1137,8 +1138,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
             if (!mHasTelephony) return;
             final boolean inAirplaneMode = serviceState.getState() == ServiceState.STATE_POWER_OFF;
             mAirplaneState = inAirplaneMode ? ToggleAction.State.On : ToggleAction.State.Off;
-            mAirplaneModeOn.updateState(mAirplaneState);
-            mAdapter.notifyDataSetChanged();
+            mHandler.sendEmptyMessage(MESSAGE_REFRESH_AIRPLANEMODE);
         }
     };
 
@@ -1161,6 +1161,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
     private static final int MESSAGE_DISMISS = 0;
     private static final int MESSAGE_REFRESH = 1;
     private static final int MESSAGE_SHOW = 2;
+    private static final int MESSAGE_REFRESH_AIRPLANEMODE = 3;
     private static final int DIALOG_DISMISS_DELAY = 300; // ms
 
     private Handler mHandler = new Handler() {
@@ -1177,6 +1178,10 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
                 break;
             case MESSAGE_SHOW:
                 handleShow();
+                break;
+            case MESSAGE_REFRESH_AIRPLANEMODE:
+                mAirplaneModeOn.updateState(mAirplaneState);
+                mAdapter.notifyDataSetChanged();
                 break;
             }
         }
