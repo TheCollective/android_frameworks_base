@@ -23,7 +23,7 @@
     <drawable name="status_bar_closed_default_background">#ff000000</drawable>
     <drawable name="status_bar_opened_default_background">#ff000000</drawable>
     <drawable name="notification_item_background_color">#ff111111</drawable>
-    <drawable name="notification_item_background_color_pressed">#ff454545</drawable>
+    <drawable name="notification_item_background_color_pressed">#ffff3000</drawable>
     <drawable name="search_bar_default_color">#ff000000</drawable>
     <drawable name="safe_mode_background">#60000000</drawable>
     <!-- Background drawable that can be used for a transparent activity to
@@ -113,7 +113,7 @@
     <!-- keyguard clock -->
     <color name="lockscreen_clock_background">#ffffffff</color>
     <color name="lockscreen_clock_foreground">#ffffffff</color>
-    <color name="lockscreen_clock_am_pm">#ffffffff</color>
+    <color name="lockscreen_clock_am_pm">#ffff3000</color>
     <color name="lockscreen_owner_info">#ff9a9a9a</color>
 
     <!-- keyguard overscroll widget pager -->
@@ -176,7 +176,7 @@
     <!-- A light Holo shade of red -->
     <color name="holo_red_light">#ffff4444</color>
     <!-- A dark Holo shade of blue -->
-    <color name="holo_blue_dark">#ff0099cc</color>
+    <color name="holo_blue_dark">#ffff3000</color>
     <!-- A dark Holo shade of green -->
     <color name="holo_green_dark">#ff669900</color>
     <!-- A dark Holo shade of red -->
