@@ -49,7 +49,7 @@
     <array name="batterymeter_color_values">
         <item>#FFFF3300</item>
         <item>#FFFF3300</item>
-        <item>#FFFFFFFF</item>
+        <item>#FFFF3000</item>
     </array>
     <array name="batterymeter_bolt_points">
         <item>73</item> <item>0</item>
