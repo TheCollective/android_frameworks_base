@@ -1879,4 +1879,7 @@
   <java-symbol type="string" name="perf_profile_bal" />
   <java-symbol type="string" name="perf_profile_perf" />
 
+   <!-- Halo -->
+  <java-symbol type="style" name="Theme.DeviceDefault.FloatingWindow" />
+  <java-symbol type="style" name="Theme.DeviceDefault.FloatingWindowLight" />
 </resources>
