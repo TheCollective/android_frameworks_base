@@ -165,7 +165,7 @@
 
     <!-- Development settings -->
     <bool name="def_stay_on_while_plugged_in">false</bool>
-
+    <integer name="def_advanced_reboot">1</integer>
     <!-- Number of retries for connecting to DHCP.
          Value here is the same as WifiStateMachine.DEFAULT_MAX_DHCP_RETRIES -->
     <integer name="def_max_dhcp_retries">9</integer>
@@ -179,4 +179,7 @@
     <integer name="def_low_battery_sound_timeout">0</integer>
     <!-- Default for Settings.System.STATUS_BAR_BATTERY -->
     <integer name="def_battery_style">0</integer>
+
+    <!-- Default for Settings.Global.TETHER_DUN_REQUIRED -->
+    <integer name="def_tether_dun_required">0</integer>
 </resources>

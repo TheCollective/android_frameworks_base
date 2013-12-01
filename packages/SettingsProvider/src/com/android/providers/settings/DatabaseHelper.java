@@ -2131,6 +2131,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadBooleanSetting(stmt, Settings.Secure.USER_SETUP_COMPLETE,
                     R.bool.def_user_setup_complete);
+					
+			loadIntegerSetting(stmt, Settings.Secure.ADVANCED_REBOOT,
+                    R.integer.def_advanced_reboot);		
+					
         } finally {
             if (stmt != null) stmt.close();
         }
@@ -2298,6 +2302,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     R.integer.def_low_battery_sound_timeout);
 
             // --- New global settings start here
+            loadIntegerSetting(stmt, Settings.Global.TETHER_DUN_REQUIRED,
+                    R.integer.def_tether_dun_required);
+
         } finally {
             if (stmt != null) stmt.close();
         }

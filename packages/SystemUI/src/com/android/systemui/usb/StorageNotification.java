@@ -224,7 +224,7 @@ public class StorageNotification extends SystemUI {
         } else if (newState.equals(Environment.MEDIA_REMOVED)) {
             /*
              * Storage has been removed. Show nomedia media notification,
-             * and disable UMS notification regardless of connection state.
+             * and disable UMS notification if the removed storage is the primary storage.
              */
             setMediaStorageNotification(
                     com.android.internal.R.string.ext_media_nomedia_notification_title,
@@ -235,7 +235,7 @@ public class StorageNotification extends SystemUI {
         } else if (newState.equals(Environment.MEDIA_BAD_REMOVAL)) {
             /*
              * Storage has been removed unsafely. Show bad removal media notification,
-             * and disable UMS notification regardless of connection state.
+             * and disable UMS notification if the removed storage is the primary storage.
              */
             setMediaStorageNotification(
                     com.android.internal.R.string.ext_media_badremoval_notification_title,
