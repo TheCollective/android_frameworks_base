@@ -4263,7 +4263,8 @@
     <!-- Message informing user that the requested activity could not be found [CHAR LIMIT=none] -->
     <string name="app_not_found">No application found to handle this action</string>
     <string name="revoke">Revoke</string>
-
+    <string name="twelve_hour_time_format">h:mm a</string>
+    <string name="twenty_four_hour_time_format">H:mm</string>
     <!-- Printing -->
 
     <!-- ISO (European standard) A0 media (paper) size: 33.11" × 46.81" -->

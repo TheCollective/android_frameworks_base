@@ -191,6 +191,8 @@
     <color name="holo_blue_bright">#ffff3000</color>
     <!-- A really bright Holo shade of gray -->
     <color name="holo_gray_bright">#33CCCCCC</color>
+    <color name="circle_battery_font">#ffffffff</color>
+    <color name="circle_battery_mod">#ffff3000</color>
 
     <drawable name="notification_template_icon_bg">#33ff3000</drawable>
     <drawable name="notification_template_icon_low_bg">#0cffffff</drawable>
