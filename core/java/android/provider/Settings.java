@@ -3139,6 +3139,17 @@ public final class Settings {
         */
         public static final String NOTIFICATION_BACKGROUND_LANDSCAPE = "notification_background_landscape";
 
+       /**
+        * Sets the alpha (transparency) of notification wallpaper
+        * @hide
+        */
+        public static final String NOTIFICATION_BACKGROUND_ALPHA = "notification_background_alpha";
+
+       /**
+        * Sets the alpha (transparency) of the notification
+        * @hide
+        */
+        public static final String NOTIFICATION_ALPHA = "notification_alpha";
 
         /**
          * Whether to show the signal text or signal bars.
@@ -5797,6 +5808,13 @@ public final class Settings {
         public static final String ADVANCED_REBOOT = "advanced_reboot";
 
         /**
+         * Whether to display the 'Wipe data' and 'Force close' options in the notification
+         * area and in the recent app list
+         * @hide
+         */
+        public static final String DEVELOPMENT_SHORTCUT = "development_shortcut";
+
+        /**
          * Whether newly installed apps should run with privacy guard by default
          * @hide
          */
@@ -5853,7 +5871,8 @@ public final class Settings {
             MOUNT_UMS_NOTIFY_ENABLED,
             UI_NIGHT_MODE,
             ADVANCED_REBOOT,
-            PRIVACY_GUARD_DEFAULT
+            PRIVACY_GUARD_DEFAULT,
+            DEVELOPMENT_SHORTCUT
         };
 
         /**
