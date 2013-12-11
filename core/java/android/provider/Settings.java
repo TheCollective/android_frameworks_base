@@ -3617,6 +3617,13 @@ public final class Settings {
          */
         public static final String APP_SIDEBAR_SHOW_TRIGGER = "app_sidebar_show_trigger";
 
+
+        /**
+         * HALO enabled, should default to 0 (HALO is disabled)
+         * @hide
+         */
+         public static final String HALO_ENABLED = "halo_enabled";
+
         /**
          * HALO, should default to 0 (no, do not show)
          * @hide
