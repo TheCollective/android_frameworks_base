@@ -11,6 +11,7 @@ import android.hardware.display.DisplayManager;
 import android.hardware.display.WifiDisplayStatus;
 import android.net.ConnectivityManager;
 import android.nfc.NfcAdapter;
+import android.os.BatteryManager;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
@@ -55,8 +56,8 @@ public class QSUtils {
         }
 
         public static boolean expandedDesktopEnabled(ContentResolver resolver) {
-            /*return (Settings.System.getIntForUser(resolver, Settings.System.EXPANDED_DESKTOP_STYLE, 0,
-                    UserHandle.USER_CURRENT_OR_SELF) != 0);*/ return false;
+            return Settings.System.getIntForUser(resolver, Settings.System.EXPANDED_DESKTOP_STYLE,
+                    0, UserHandle.USER_CURRENT_OR_SELF) != 0;
         }
 
         public static boolean deviceSupportsNfc(Context ctx) {
@@ -69,9 +70,8 @@ public class QSUtils {
         }
 
         public static boolean deviceSupportsDockBattery(Context ctx) {
-            Resources res = ctx.getResources();
-            //return res.getBoolean(com.android.internal.R.bool.config_hasDockBattery);
-	    return false;
+            BatteryManager bm = (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+            return bm.isDockBatterySupported();
         }
 
         public static boolean deviceSupportsCamera() {
