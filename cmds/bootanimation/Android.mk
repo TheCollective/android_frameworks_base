@@ -42,3 +42,4 @@ LOCAL_MODULE:= bootanimation
 
 
 include $(BUILD_EXECUTABLE)
+
