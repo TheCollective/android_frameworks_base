@@ -657,8 +657,7 @@ final class UserState implements PrintSpoolerCallbacks, PrintServiceCallbacks {
             tempPrintServices.add(PrintServiceInfo.create(installedService, mContext));
         }
 
-        if (tempPrintServices.size() != mInstalledServices.size()
-                || !tempPrintServices.containsAll(mInstalledServices)) {
+        if (!tempPrintServices.equals(mInstalledServices)) {
             mInstalledServices.clear();
             mInstalledServices.addAll(tempPrintServices);
             return true;

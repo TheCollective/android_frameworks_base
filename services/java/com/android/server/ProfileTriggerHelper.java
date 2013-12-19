@@ -22,34 +22,21 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.database.ContentObserver;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.WifiInfo;
-import android.os.Handler;
-import android.provider.Settings;
 import android.util.Log;
 
 import java.util.UUID;
 
 public class ProfileTriggerHelper extends BroadcastReceiver {
-    private static final String TAG = "ProfileTriggerHelper";
+    private static final String TAG = "ProfileTriggerService";
 
     private Context mContext;
     private ProfileManagerService mService;
 
     private WifiManager mWifiManager;
     private String mLastConnectedSSID;
-
-    private IntentFilter mIntentFilter;
-    private boolean mFilterRegistered = false;
-
-    private ContentObserver mSettingsObserver = new ContentObserver(new Handler()) {
-        @Override
-        public void onChange(boolean selfChange) {
-            updateEnabled();
-        }
-    };
 
     public ProfileTriggerHelper(Context context, ProfileManagerService service) {
         mContext = context;
@@ -58,29 +45,11 @@ public class ProfileTriggerHelper extends BroadcastReceiver {
         mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
         mLastConnectedSSID = getActiveSSID();
 
-        mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-        mIntentFilter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
-        mIntentFilter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-        updateEnabled();
-
-        mContext.getContentResolver().registerContentObserver(
-                Settings.System.getUriFor(Settings.System.SYSTEM_PROFILES_ENABLED), false,
-                mSettingsObserver);
-    }
-
-    public void updateEnabled() {
-        boolean enabled = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.SYSTEM_PROFILES_ENABLED, 1) == 1;
-        if (enabled && !mFilterRegistered) {
-            Log.v(TAG, "Enabling");
-            mContext.registerReceiver(this, mIntentFilter);
-            mFilterRegistered = true;
-        } else if (!enabled && mFilterRegistered) {
-            Log.v(TAG, "Disabling");
-            mContext.unregisterReceiver(this);
-            mFilterRegistered = false;
-        }
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        mContext.registerReceiver(this, filter);
     }
 
     @Override
