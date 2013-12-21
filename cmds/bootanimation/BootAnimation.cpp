@@ -626,4 +626,3 @@ bool BootAnimation::movie()
 
 }
 ; // namespace android
-
