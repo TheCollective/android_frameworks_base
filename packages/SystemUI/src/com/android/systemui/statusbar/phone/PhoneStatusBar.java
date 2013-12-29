@@ -123,6 +123,7 @@ import com.android.systemui.statusbar.policy.NetworkController;
 import com.android.systemui.statusbar.policy.NotificationRowLayout;
 import com.android.systemui.statusbar.policy.OnSizeChangedListener;
 import com.android.systemui.statusbar.policy.RotationLockController;
+import java.io.IOException;
 
 
 
@@ -3004,8 +3005,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
             Log.v(TAG, "configuration changed: " + mContext.getResources().getConfiguration());
         }
         updateDisplaySize(); // populates mDisplayMetrics
-
-        updateResources();
+        updateResources(); //NPE 3rd
         repositionNavigationBar();
         updateExpandedViewPos(EXPANDED_LEAVE_ALONE);
         updateShowSearchHoldoff();
@@ -3112,7 +3112,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
 
         makeStatusBarView();
         repositionNavigationBar();
-        mNavigationBarView.updateResources();
+        mNavigationBarView.updateResources(); //NPE 1st
 
         // recreate StatusBarIconViews.
         for (int i = 0; i < nIcons; i++) {
@@ -3151,7 +3151,11 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
         if (newTheme != null &&
                 (mCurrentTheme == null || !mCurrentTheme.equals(newTheme))) {
             mCurrentTheme = (CustomTheme)newTheme.clone();
-            recreateStatusBar();
+            // abandon old method:> "recreateStatusBar();" in favor of catch exception
+            try {
+                Runtime.getRuntime().exec("pkill -TERM -f com.android.systemui");
+            } catch (IOException e) {
+            }
         } else {
 
             if (mClearButton instanceof TextView) {
