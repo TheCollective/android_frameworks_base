@@ -99,6 +99,8 @@ import android.widget.ImageView;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.TabHost;
+import android.widget.TabHost.TabSpec;
 import android.widget.TextView;
 
 import com.android.internal.statusbar.StatusBarIcon;
@@ -661,6 +663,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
 
         if (mRecreating) {
             removeSidebarView();
+        } else {
+            addActiveDisplayView();
         }
         addSidebarView();
 

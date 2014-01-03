@@ -60,4 +60,8 @@
         <item>157</item><item>334</item>
         <item>0</item>  <item>334</item>
     </array>
+
+    <array name="ad_targets_unlock_only">
+        <item>@drawable/ic_ad_target_unlock</item>
+    </array>
 </resources>
