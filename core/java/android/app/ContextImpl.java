@@ -2178,6 +2178,9 @@ class ContextImpl extends Context {
         File[] result = new File[dirs.length];
         for (int i = 0; i < dirs.length; i++) {
             File dir = dirs[i];
+            if (Environment.MEDIA_REMOVED.equals(Environment.getStorageState(dir))) {
+                continue;
+            }
             if (!dir.exists()) {
                 if (!dir.mkdirs()) {
                     // recheck existence in case of cross-process race

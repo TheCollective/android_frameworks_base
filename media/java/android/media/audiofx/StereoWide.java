@@ -278,4 +278,3 @@ public class StereoWide extends AudioEffect {
         checkStatus(setParameter(PARAM_STRENGTH, settings.strength));
     }
 }
-
