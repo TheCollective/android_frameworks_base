@@ -148,3 +148,4 @@ int register_android_server_LightsService(JNIEnv *env)
 }
 
 };
+
